@@ -7,7 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -52,25 +52,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, metadata?: any) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: metadata?.fullName,
+          username: metadata?.username,
+          phone: metadata?.phone,
+          gender: metadata?.gender,
+          date_of_birth: metadata?.dateOfBirth,
+          accept_marketing: metadata?.acceptMarketing,
         },
       },
     });
     if (error) throw error;
 
     // Create profile after signup
-    if (data.user) {
+    if (data.user && metadata) {
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: data.user.id,
-          full_name: fullName,
+          username: metadata.username,
+          full_name: metadata.fullName,
+          phone: metadata.phone,
+          gender: metadata.gender,
+          date_of_birth: metadata.dateOfBirth ? new Date(metadata.dateOfBirth).toISOString() : null,
+          preferences: {
+            accept_marketing: metadata.acceptMarketing,
+          },
         });
       if (profileError) throw profileError;
     }
