@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Image } from 'react-native';
 import {
   Box,
   VStack,
@@ -8,28 +9,23 @@ import {
   Button,
   ScrollView,
   Icon,
-  useToast,
-  Image,
+  Avatar,
   Badge,
-  Card,
-  Pressable,
   Progress,
   Divider,
-  Avatar,
+  useToast,
+  Skeleton,
   Modal,
   FormControl,
-  Input,
   TextArea,
   Select,
   CheckIcon,
-  Skeleton,
+  Pressable,
+  Card,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
   CampaignDetail: { campaignId: string };
@@ -37,7 +33,7 @@ type RootStackParamList = {
 };
 
 type CampaignDetailRouteProp = RouteProp<RootStackParamList, 'CampaignDetail'>;
-type CampaignDetailNavigationProp = StackNavigationProp<RootStackParamList>;
+type CampaignDetailNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface Campaign {
   id: string;
@@ -90,7 +86,6 @@ interface ReviewForm {
 export const CampaignDetailScreen = () => {
   const navigation = useNavigation<CampaignDetailNavigationProp>();
   const route = useRoute<CampaignDetailRouteProp>();
-  const { user } = useAuth();
   const toast = useToast();
 
   const { campaignId } = route.params;
@@ -342,8 +337,7 @@ export const CampaignDetailScreen = () => {
           <Image
             source={{ uri: campaign.image }}
             alt={campaign.title}
-            w="full"
-            h={200}
+            style={{ width: '100%', height: 200 }}
             resizeMode="cover"
           />
           <Box position="absolute" top={2} right={2}>
@@ -620,6 +614,7 @@ export const CampaignDetailScreen = () => {
                   value={reviewForm.comment}
                   onChangeText={(text) => setReviewForm({...reviewForm, comment: text})}
                   h={20}
+                  autoCompleteType="off"
                 />
               </FormControl>
             </VStack>

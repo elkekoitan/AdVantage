@@ -12,17 +12,12 @@ import {
   Card,
   Pressable,
   Badge,
-  Image,
   useToast,
   Skeleton,
   Center,
-  Divider,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
-
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
 
 interface Company {
   id: string;
@@ -56,7 +51,6 @@ interface PopularLocation {
 }
 
 export const ExploreScreen = () => {
-  const { user } = useAuth();
   const toast = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');

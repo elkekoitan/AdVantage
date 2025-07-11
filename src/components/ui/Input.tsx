@@ -3,9 +3,6 @@ import {
   Input as NBInput,
   IInputProps,
   FormControl,
-  VStack,
-  HStack,
-  Text,
   Icon,
   Pressable,
   Box,
@@ -17,8 +14,8 @@ interface CustomInputProps extends IInputProps {
   helperText?: string;
   errorMessage?: string;
   isRequired?: boolean;
-  leftIcon?: keyof typeof MaterialIcons.glyphMap;
-  rightIcon?: keyof typeof MaterialIcons.glyphMap;
+  leftIcon?: string;
+  rightIcon?: string;
   onRightIconPress?: () => void;
   variant?: 'outline' | 'filled' | 'underlined' | 'unstyled';
 }

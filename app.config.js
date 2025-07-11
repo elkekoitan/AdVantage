@@ -50,9 +50,9 @@ export default {
         'expo-build-properties',
         {
           android: {
-            compileSdkVersion: 33,
-            targetSdkVersion: 33,
-            buildToolsVersion: '33.0.0',
+            compileSdkVersion: 34,
+            targetSdkVersion: 34,
+            buildToolsVersion: '34.0.0',
           },
           ios: {
             deploymentTarget: '15.1',
@@ -61,10 +61,13 @@ export default {
       ],
     ],
     extra: {
+      eas: {
+        projectId: "05601bff-db0b-43f2-88e0-81c167cd9032"
+      },
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
     },
   },
-}; 
+};

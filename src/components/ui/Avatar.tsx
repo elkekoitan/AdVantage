@@ -6,7 +6,6 @@ import {
   Text,
   HStack,
   VStack,
-  Badge,
   Pressable,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,7 +19,7 @@ interface CustomAvatarProps extends IAvatarProps {
   badgeColor?: string;
   badgePosition?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left';
   onPress?: () => void;
-  fallbackIcon?: keyof typeof MaterialIcons.glyphMap;
+  fallbackIcon?: string;
 }
 
 interface AvatarGroupProps {
@@ -104,7 +103,7 @@ export const Avatar: React.FC<CustomAvatarProps> = ({
         {name ? (
           getInitials(name)
         ) : (
-          <MaterialIcons name={fallbackIcon} size={size === 'xs' ? 16 : size === 'sm' ? 20 : size === 'md' ? 24 : size === 'lg' ? 32 : size === 'xl' ? 40 : 48} color="white" />
+          <MaterialIcons name={fallbackIcon as any} size={size === 'xs' ? 16 : size === 'sm' ? 20 : size === 'md' ? 24 : size === 'lg' ? 32 : size === 'xl' ? 40 : 48} color="white" />
         )}
       </NBAvatar>
       

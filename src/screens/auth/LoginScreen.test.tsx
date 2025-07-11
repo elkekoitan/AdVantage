@@ -2,15 +2,18 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NativeBaseProvider } from 'native-base';
 import { LoginScreen } from './LoginScreen';
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
 
 // Mock AuthContext
 const mockSignIn = jest.fn();
-const mockAuthContext = {
+const mockAuthContext: AuthContextType = {
   signIn: mockSignIn,
   signOut: jest.fn(),
+  signUp: jest.fn(),
+  resetPassword: jest.fn(),
   user: null,
   loading: false,
+  session: null,
 };
 
 // Mock useNavigation
@@ -22,18 +25,22 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 // Wrapper for NativeBaseProvider
+const inset = {
+  frame: { x: 0, y: 0, width: 0, height: 0 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
+
 const Wrapper = ({ children }: { children: React.ReactNode }) => {
   return (
-    <NativeBaseProvider initialWindowMetrics={{
-      frame: { x: 0, y: 0, width: 0, height: 0 },
-      insets: { top: 0, left: 0, right: 0, bottom: 0 },
-    }}>
+    <NativeBaseProvider initialWindowMetrics={inset}>
       <AuthContext.Provider value={mockAuthContext}>
         {children}
       </AuthContext.Provider>
     </NativeBaseProvider>
   );
 };
+
+
 
 describe('LoginScreen', () => {
   beforeEach(() => {

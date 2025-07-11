@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -27,10 +27,9 @@ import {
   Circle,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
-import { RefreshControl, Alert } from 'react-native';
+import { RefreshControl } from 'react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
 
 interface UserProfile {
   id: string;
@@ -71,6 +70,7 @@ export const ProfileScreen = () => {
   const toast = useToast();
   const { isOpen: isLogoutOpen, onOpen: onLogoutOpen, onClose: onLogoutClose } = useDisclose();
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclose();
+  const cancelRef = useRef(null);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -587,6 +587,7 @@ export const ProfileScreen = () => {
                   value={editForm.bio}
                   onChangeText={(text) => setEditForm({...editForm, bio: text})}
                   h={20}
+                  autoCompleteType="off"
                 />
               </FormControl>
 
@@ -665,7 +666,7 @@ export const ProfileScreen = () => {
 
       {/* Logout Confirmation */}
       <AlertDialog
-        leastDestructiveRef={undefined}
+        leastDestructiveRef={cancelRef}
         isOpen={isLogoutOpen}
         onClose={onLogoutClose}
       >
@@ -678,6 +679,7 @@ export const ProfileScreen = () => {
           <AlertDialog.Footer>
             <Button.Group space={2}>
               <Button
+                ref={cancelRef}
                 variant="unstyled"
                 colorScheme="coolGray"
                 onPress={onLogoutClose}

@@ -23,13 +23,11 @@ import {
   Select,
   CheckIcon,
   Switch,
-  Divider,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
 
 interface Program {
   id: string;
@@ -47,29 +45,17 @@ interface Program {
   user_id: string;
 }
 
-interface Activity {
-  id: string;
-  program_id: string;
-  title: string;
-  description: string;
-  amount: number;
-  date: string;
-  category: string;
-  company_name?: string;
-  is_completed: boolean;
-}
+
 
 export const ProgramScreen = () => {
   const { user } = useAuth();
   const toast = useToast();
 
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'all'>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
 
   // Create Program Form State
   const [newProgram, setNewProgram] = useState({
@@ -526,6 +512,7 @@ export const ProgramScreen = () => {
                   value={newProgram.description}
                   onChangeText={(text) => setNewProgram({...newProgram, description: text})}
                   h={20}
+                  autoCompleteType="off"
                 />
               </FormControl>
 

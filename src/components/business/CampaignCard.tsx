@@ -43,13 +43,7 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
   isFavorite = false,
   variant = 'default',
 }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('tr-TR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+
 
   const getRemainingDays = () => {
     const endDate = new Date(campaign.end_date);
@@ -86,7 +80,6 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
   };
 
   const remainingDays = getRemainingDays();
-  const usagePercentage = campaign.max_usage ? (campaign.usage_count / campaign.max_usage) * 100 : 0;
 
   if (variant === 'compact') {
     return (

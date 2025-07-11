@@ -26,13 +26,15 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, '
 
 export const LoginScreen = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple } = useAuth();
   const toast = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -62,6 +64,44 @@ export const LoginScreen = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (error: unknown) {
+      let errorMessage = 'Google ile giriş başarısız';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Giriş Başarısız',
+        description: errorMessage,
+        colorScheme: 'error',
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setAppleLoading(true);
+    try {
+      await signInWithApple();
+    } catch (error: unknown) {
+      let errorMessage = 'Apple ile giriş başarısız';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Giriş Başarısız',
+        description: errorMessage,
+        colorScheme: 'error',
+      });
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -178,6 +218,9 @@ export const LoginScreen = () => {
                   leftIcon={
                     <Icon as={MaterialIcons} name="g-mobiledata" size={6} />
                   }
+                  onPress={handleGoogleLogin}
+                  isLoading={googleLoading}
+                  isLoadingText="Google..."
                 >
                   Google
                 </Button>
@@ -188,6 +231,9 @@ export const LoginScreen = () => {
                   leftIcon={
                     <Icon as={MaterialIcons} name="apple" size={5} />
                   }
+                  onPress={handleAppleLogin}
+                  isLoading={appleLoading}
+                  isLoadingText="Apple..."
                 >
                   Apple
                 </Button>
@@ -205,7 +251,7 @@ export const LoginScreen = () => {
                   fontWeight: 'medium',
                   fontSize: 'sm',
                 }}
-                onPress={() => navigation.navigate('Register')}
+                onPress={() => navigation.navigate('Register', {})}
               >
                 Kayıt Ol
               </Link>
@@ -215,4 +261,4 @@ export const LoginScreen = () => {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}; 
+};

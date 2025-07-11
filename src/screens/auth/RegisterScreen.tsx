@@ -35,7 +35,7 @@ interface FormData {
   fullName: string;
   username: string;
   phone: string;
-  gender: string;
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined;
   dateOfBirth: string;
   acceptTerms: boolean;
   acceptMarketing: boolean;
@@ -53,7 +53,7 @@ interface FormErrors {
 
 export const RegisterScreen = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
   const toast = useToast();
 
   const [formData, setFormData] = useState<FormData>({
@@ -63,7 +63,7 @@ export const RegisterScreen = () => {
     fullName: '',
     username: '',
     phone: '',
-    gender: '',
+    gender: undefined,
     dateOfBirth: '',
     acceptTerms: false,
     acceptMarketing: false,
@@ -73,6 +73,8 @@ export const RegisterScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -172,6 +174,44 @@ export const RegisterScreen = () => {
     setFormData(prev => ({ ...prev, [key]: value }));
     if (errors[key as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [key]: undefined }));
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (error: unknown) {
+      let errorMessage = 'Google ile kayıt başarısız';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Kayıt Başarısız',
+        description: errorMessage,
+        colorScheme: 'error',
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleSignUp = async () => {
+    setAppleLoading(true);
+    try {
+      await signInWithApple();
+    } catch (error: unknown) {
+      let errorMessage = 'Apple ile kayıt başarısız';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Kayıt Başarısız',
+        description: errorMessage,
+        colorScheme: 'error',
+      });
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -461,6 +501,9 @@ export const RegisterScreen = () => {
                   leftIcon={
                     <Icon as={MaterialIcons} name="g-mobiledata" size={6} />
                   }
+                  onPress={handleGoogleSignUp}
+                  isLoading={googleLoading}
+                  isLoadingText="Google..."
                 >
                   Google
                 </Button>
@@ -471,6 +514,9 @@ export const RegisterScreen = () => {
                   leftIcon={
                     <Icon as={MaterialIcons} name="apple" size={5} />
                   }
+                  onPress={handleAppleSignUp}
+                  isLoading={appleLoading}
+                  isLoadingText="Apple..."
                 >
                   Apple
                 </Button>
@@ -498,4 +544,4 @@ export const RegisterScreen = () => {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}; 
+};

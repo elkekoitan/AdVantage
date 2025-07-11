@@ -4,7 +4,7 @@ export { Card } from './Card';
 export { Input, PasswordInput } from './Input';
 export { Modal, ConfirmationModal } from './Modal';
 export { Loading, SkeletonLoader, ListSkeleton, CardGridSkeleton } from './Loading';
-export { Badge, StatusBadge, PriorityBadge } from './Badge';
+export { Badge, StatusBadge } from './Badge';
 export { Avatar, AvatarGroup, UserAvatar, CompanyAvatar } from './Avatar';
 
 // Re-export commonly used Native Base components with custom styling
@@ -28,15 +28,11 @@ export {
   Stack,
   Wrap,
   SimpleGrid,
-  Grid,
-  GridItem,
 } from 'native-base';
 
 // Export types for TypeScript support
 export type {
   IBoxProps,
-  IVStackProps,
-  IHStackProps,
   ITextProps,
   IHeadingProps,
   IScrollViewProps,

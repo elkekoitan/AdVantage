@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -20,25 +20,19 @@ import {
   CheckIcon,
   useDisclose,
   Card,
-  Pressable,
-  Divider,
-  Circle,
   AlertDialog,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
   ProgramDetail: { programId: string };
 };
 
 type ProgramDetailRouteProp = RouteProp<RootStackParamList, 'ProgramDetail'>;
-type ProgramDetailNavigationProp = StackNavigationProp<RootStackParamList>;
+type ProgramDetailNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface Activity {
   id: string;
@@ -68,10 +62,10 @@ interface Program {
 export const ProgramDetailScreen = () => {
   const route = useRoute<ProgramDetailRouteProp>();
   const navigation = useNavigation<ProgramDetailNavigationProp>();
-  const { user } = useAuth();
   const toast = useToast();
   const { isOpen: isAddActivityOpen, onOpen: onAddActivityOpen, onClose: onAddActivityClose } = useDisclose();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclose();
+  const cancelRef = useRef(null);
 
   const [program, setProgram] = useState<Program | null>(null);
   const [loading, setLoading] = useState(true);
@@ -584,7 +578,7 @@ export const ProgramDetailScreen = () => {
 
       {/* Delete Confirmation */}
       <AlertDialog
-        leastDestructiveRef={undefined}
+        leastDestructiveRef={cancelRef}
         isOpen={isDeleteOpen}
         onClose={onDeleteClose}
       >
@@ -597,6 +591,7 @@ export const ProgramDetailScreen = () => {
           <AlertDialog.Footer>
             <Button.Group space={2}>
               <Button
+                ref={cancelRef}
                 variant="unstyled"
                 colorScheme="coolGray"
                 onPress={onDeleteClose}

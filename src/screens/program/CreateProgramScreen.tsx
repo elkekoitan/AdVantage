@@ -22,17 +22,16 @@ import {
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
+
 
 type RootStackParamList = {
   CreateProgram: undefined;
   ProgramDetail: { programId: string };
 };
 
-type CreateProgramNavigationProp = StackNavigationProp<RootStackParamList>;
+type CreateProgramNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface ProgramTemplate {
   id: string;
@@ -59,7 +58,6 @@ interface ActivityForm {
 
 export const CreateProgramScreen = () => {
   const navigation = useNavigation<CreateProgramNavigationProp>();
-  const { user } = useAuth();
   const toast = useToast();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -391,6 +389,7 @@ export const CreateProgramScreen = () => {
             value={programForm.description}
             onChangeText={(text) => setProgramForm({...programForm, description: text})}
             h={20}
+            autoCompleteType="off"
           />
         </FormControl>
 

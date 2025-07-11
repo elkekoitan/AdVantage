@@ -25,10 +25,9 @@ import {
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../services/supabase';
+
 
 type RootStackParamList = {
   CompanyDetail: { companyId: string };
@@ -36,7 +35,7 @@ type RootStackParamList = {
 };
 
 type CompanyDetailRouteProp = RouteProp<RootStackParamList, 'CompanyDetail'>;
-type CompanyDetailNavigationProp = StackNavigationProp<RootStackParamList>;
+type CompanyDetailNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface Company {
   id: string;
@@ -109,7 +108,6 @@ interface ReviewForm {
 export const CompanyDetailScreen = () => {
   const navigation = useNavigation<CompanyDetailNavigationProp>();
   const route = useRoute<CompanyDetailRouteProp>();
-  const { user } = useAuth();
   const toast = useToast();
 
   const { companyId } = route.params;
@@ -882,6 +880,7 @@ export const CompanyDetailScreen = () => {
                   value={reviewForm.comment}
                   onChangeText={(text) => setReviewForm({...reviewForm, comment: text})}
                   h={20}
+                  autoCompleteType="off"
                 />
               </FormControl>
             </VStack>

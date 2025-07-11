@@ -1,14 +1,14 @@
 import React from 'react';
-import { Button as NBButton, IButtonProps, Text } from 'native-base';
+import { Button as NBButton, IButtonProps } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 
-interface CustomButtonProps extends IButtonProps {
+interface CustomButtonProps extends Omit<IButtonProps, 'leftIcon' | 'rightIcon'> {
   title: string;
   variant?: 'solid' | 'outline' | 'ghost' | 'link';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   colorScheme?: string;
-  leftIcon?: keyof typeof MaterialIcons.glyphMap;
-  rightIcon?: keyof typeof MaterialIcons.glyphMap;
+  leftIcon?: string;
+  rightIcon?: string;
   isLoading?: boolean;
   isDisabled?: boolean;
 }
@@ -33,12 +33,12 @@ export const Button: React.FC<CustomButtonProps> = ({
       isDisabled={isDisabled}
       leftIcon={
         leftIcon ? (
-          <MaterialIcons name={leftIcon} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
+          <MaterialIcons name={leftIcon as any} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
         ) : undefined
       }
       rightIcon={
         rightIcon ? (
-          <MaterialIcons name={rightIcon} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
+          <MaterialIcons name={rightIcon as any} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
         ) : undefined
       }
       _text={{
@@ -49,9 +49,7 @@ export const Button: React.FC<CustomButtonProps> = ({
       shadow={variant === 'solid' ? 2 : 0}
       {...props}
     >
-      <Text color={variant === 'solid' ? 'white' : colorScheme + '.600'}>
-        {title}
-      </Text>
+      {title}
     </NBButton>
   );
 };

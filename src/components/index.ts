@@ -19,7 +19,7 @@ export {
   CardGridSkeleton,
   Badge,
   StatusBadge,
-  PriorityBadge,
+  // PriorityBadge has been removed as it is not exported from './ui'
   Avatar,
   AvatarGroup,
   UserAvatar,

@@ -2,13 +2,13 @@ import React from 'react';
 import { Badge as NBBadge, IBadgeProps, Text, HStack, Icon } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 
-interface CustomBadgeProps extends IBadgeProps {
+interface CustomBadgeProps extends Omit<IBadgeProps, 'leftIcon' | 'rightIcon' | 'rounded'> {
   label: string;
   variant?: 'solid' | 'outline' | 'subtle';
   colorScheme?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'gray';
   size?: 'sm' | 'md' | 'lg';
-  leftIcon?: keyof typeof MaterialIcons.glyphMap;
-  rightIcon?: keyof typeof MaterialIcons.glyphMap;
+  leftIcon?: string;
+  rightIcon?: string;
   rounded?: boolean;
 }
 
@@ -88,7 +88,7 @@ export const Badge: React.FC<CustomBadgeProps> = ({
 
   return (
     <NBBadge
-      borderRadius={rounded ? 'full' : 'md'}
+      borderRadius={rounded ? 'full' : 'md' as any}
       alignSelf="flex-start"
       {...variantStyles}
       {...sizeStyles}
@@ -98,7 +98,7 @@ export const Badge: React.FC<CustomBadgeProps> = ({
         {leftIcon && (
           <Icon
             as={MaterialIcons}
-            name={leftIcon}
+            name={leftIcon as any}
             size={sizeStyles.iconSize}
             color={iconColor}
           />
@@ -109,7 +109,7 @@ export const Badge: React.FC<CustomBadgeProps> = ({
         {rightIcon && (
           <Icon
             as={MaterialIcons}
-            name={rightIcon}
+            name={rightIcon as any}
             size={sizeStyles.iconSize}
             color={iconColor}
           />
@@ -132,49 +132,49 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
         return {
           label: 'Aktif',
           colorScheme: 'success',
-          leftIcon: 'check-circle' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'check-circle',
         };
       case 'inactive':
         return {
           label: 'Pasif',
           colorScheme: 'gray',
-          leftIcon: 'pause-circle-outline' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'pause-circle-outline',
         };
       case 'pending':
         return {
           label: 'Beklemede',
           colorScheme: 'warning',
-          leftIcon: 'schedule' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'schedule',
         };
       case 'completed':
         return {
           label: 'Tamamlandı',
           colorScheme: 'success',
-          leftIcon: 'check-circle' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'check-circle',
         };
       case 'cancelled':
         return {
           label: 'İptal Edildi',
           colorScheme: 'danger',
-          leftIcon: 'cancel' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'cancel',
         };
       case 'expired':
         return {
           label: 'Süresi Doldu',
           colorScheme: 'danger',
-          leftIcon: 'access-time' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'access-time',
         };
       case 'paused':
         return {
           label: 'Duraklatıldı',
           colorScheme: 'warning',
-          leftIcon: 'pause' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'pause',
         };
       default:
         return {
           label: 'Bilinmiyor',
           colorScheme: 'gray',
-          leftIcon: 'help-outline' as keyof typeof MaterialIcons.glyphMap,
+          leftIcon: 'help-outline',
         };
     }
   };
@@ -184,7 +184,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
   return (
     <Badge
       label={config.label}
-      colorScheme={config.colorScheme}
+      colorScheme={config.colorScheme as any}
       leftIcon={config.leftIcon}
       size={size}
       variant="subtle"
@@ -239,7 +239,7 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, size = '
   return (
     <Badge
       label={config.label}
-      colorScheme={config.colorScheme}
+      colorScheme={config.colorScheme as any}
       leftIcon={config.leftIcon}
       size={size}
       variant="solid"

@@ -420,7 +420,7 @@ export class GeminiService {
     }
   }
 
-  async generateAndSaveRecommendations(userId: string, type: string = 'restaurant'): Promise<void> {
+  async generateAndSaveRecommendations(userId: string, type: 'restaurant' | 'activity' | 'product' | 'event' | 'program' = 'restaurant'): Promise<void> {
     try {
       const userPreferences = await this.getUserPreferences(userId);
       
@@ -439,4 +439,4 @@ export class GeminiService {
   }
 }
 
-export const geminiService = GeminiService.getInstance(); 
+export const geminiService = GeminiService.getInstance();
