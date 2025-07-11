@@ -11,6 +11,8 @@ const mockAuthContext: AuthContextType = {
   signOut: jest.fn(),
   signUp: jest.fn(),
   resetPassword: jest.fn(),
+  signInWithGoogle: jest.fn(),
+  signInWithApple: jest.fn(),
   user: null,
   loading: false,
   session: null,

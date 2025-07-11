@@ -20,9 +20,6 @@ import {
   Slider,
   Switch,
   TextArea,
-  Divider,
-  Center,
-  Spinner,
 } from 'native-base';
 import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -361,6 +358,7 @@ export const CreateProgramScreen = () => {
                     value={formData.description}
                     onChangeText={(text) => updateFormData('description', text)}
                     h={20}
+                    autoCompleteType="off"
                   />
                 </FormControl>
 

@@ -14,7 +14,6 @@ import {
   useToast,
   Progress,
   Divider,
-  Avatar,
   Center,
   Spinner,
   AlertDialog,
@@ -24,7 +23,6 @@ import {
   Input,
   TextArea,
   Select,
-  Switch,
 } from 'native-base';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -89,7 +87,7 @@ interface Expense {
 export const ProgramDetailsScreen = () => {
   const navigation = useNavigation<ProgramDetailsScreenNavigationProp>();
   const route = useRoute<ProgramDetailsScreenRouteProp>();
-  const { user } = useAuth();
+
   const toast = useToast();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclose();
   const { isOpen: isExpenseOpen, onOpen: onExpenseOpen, onClose: onExpenseClose } = useDisclose();
@@ -799,7 +797,7 @@ export const ProgramDetailsScreen = () => {
       </ScrollView>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog isOpen={isDeleteOpen} onClose={onDeleteClose}>
+      <AlertDialog isOpen={isDeleteOpen} onClose={onDeleteClose} leastDestructiveRef={undefined}>
         <AlertDialog.Content>
           <AlertDialog.CloseButton />
           <AlertDialog.Header>Programı Sil</AlertDialog.Header>
@@ -878,6 +876,7 @@ export const ProgramDetailsScreen = () => {
                   value={expenseForm.description}
                   onChangeText={(text) => setExpenseForm(prev => ({ ...prev, description: text }))}
                   h={20}
+                  autoCompleteType="off"
                 />
               </FormControl>
             </VStack>
@@ -918,6 +917,7 @@ export const ProgramDetailsScreen = () => {
                   value={editForm.description}
                   onChangeText={(text) => setEditForm(prev => ({ ...prev, description: text }))}
                   h={20}
+                  autoCompleteType="off"
                 />
               </FormControl>
 
