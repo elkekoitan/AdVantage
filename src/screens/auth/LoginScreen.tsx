@@ -38,8 +38,8 @@ export const LoginScreen = () => {
     if (!email || !password) {
       toast.show({
         title: 'Hata',
-        description: 'Lütfen tüm alanları doldurun',
-        status: 'error',
+        description: 'Lütfen e-posta ve şifre girin.',
+        colorScheme: 'error',
       });
       return;
     }
@@ -48,11 +48,17 @@ export const LoginScreen = () => {
     try {
       await signIn(email, password);
       // Navigation will be handled by AuthContext
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorMessage = 'Bir hata oluştu';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       toast.show({
         title: 'Giriş Başarısız',
-        description: error.message || 'Bir hata oluştu',
-        status: 'error',
+        description: errorMessage,
+        colorScheme: 'error',
       });
     } finally {
       setLoading(false);

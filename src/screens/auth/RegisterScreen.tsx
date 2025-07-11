@@ -146,16 +146,22 @@ export const RegisterScreen = () => {
 
       toast.show({
         title: 'Kayıt Başarılı',
-        description: 'Hesabınız oluşturuldu. E-posta adresinizi doğrulayın.',
-        status: 'success',
+        description: 'Hesabınız oluşturuldu.',
+        colorScheme: 'success',
       });
 
       // Navigation will be handled by AuthContext
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorMessage = 'Bir hata oluştu';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       toast.show({
-        title: 'Kayıt Başarısız',
-        description: error.message || 'Bir hata oluştu',
-        status: 'error',
+        title: 'Hata',
+        description: errorMessage,
+        colorScheme: 'error',
       });
     } finally {
       setLoading(false);
@@ -186,7 +192,7 @@ export const RegisterScreen = () => {
                 Hesap Oluştur
               </Heading>
               <Text fontSize="md" color="gray.600" textAlign="center">
-                AdVantage'a katılın ve kişiselleştirilmiş deneyimler keşfedin
+                AdVantage&apos;a katılın ve kişiselleştirilmiş deneyimler keşfedin
               </Text>
             </VStack>
 
@@ -404,8 +410,8 @@ export const RegisterScreen = () => {
                     colorScheme="primary"
                   >
                     <Text fontSize="sm" color="gray.700">
-                      <Link _text={{ color: 'primary.600' }}>Kullanım Koşulları</Link> ve{' '}
-                      <Link _text={{ color: 'primary.600' }}>Gizlilik Politikası</Link>'nı kabul ediyorum
+                      <Link _text={{ color: 'primary.600' }}>Kullanım Koşulları</Link> ve&nbsp;
+                      <Link _text={{ color: 'primary.600' }}>Gizlilik Politikası</Link>&apos;nı kabul ediyorum
                     </Text>
                   </Checkbox>
                   <Checkbox
@@ -474,7 +480,7 @@ export const RegisterScreen = () => {
             {/* Login Link */}
             <HStack justifyContent="center" mt={4}>
               <Text fontSize="sm" color="gray.600">
-                Zaten hesabınız var mı?{' '}
+                Zaten hesabınız var mı?&nbsp;
               </Text>
               <Link
                 _text={{

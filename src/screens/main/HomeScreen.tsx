@@ -19,7 +19,7 @@ import {
   Center,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+
 import { RefreshControl } from 'react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -53,9 +53,18 @@ interface UserStats {
   current_streak: number;
 }
 
+interface SupabaseProgramData {
+  id: string;
+  title: string;
+  date: string;
+  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  total_budget: number;
+  spent_amount: number;
+  program_activities: { count: number }[];
+}
+
 export const HomeScreen = () => {
   const { user, signOut } = useAuth();
-  const navigation = useNavigation();
   const toast = useToast();
 
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -70,81 +79,85 @@ export const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch user programs
-      const { data: programsData, error: programsError } = await supabase
-        .from('programs')
-        .select(`
-          id,
-          title,
-          date,
-          status,
-          total_budget,
-          spent_amount,
-          program_activities(count)
-        `)
-        .eq('user_id', user?.id)
-        .order('date', { ascending: false })
-        .limit(5);
-
-      if (programsError) throw programsError;
-
-      // Transform programs data
-      const transformedPrograms = programsData?.map((program: any) => ({
-        ...program,
-        activities_count: program.program_activities?.length || 0,
-      })) || [];
-
-      setPrograms(transformedPrograms);
-
-      // Fetch recommendations
-      const { data: recommendationsData, error: recommendationsError } = await supabase
-        .from('recommendations')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('score', { ascending: false })
-        .limit(6);
-
-      if (recommendationsError) throw recommendationsError;
-      setRecommendations(recommendationsData || []);
-
-      // Calculate user stats
-      const totalPrograms = programsData?.length || 0;
-      const completedPrograms = programsData?.filter(p => p.status === 'completed').length || 0;
-      const totalSavings = programsData?.reduce((sum, p) => sum + (p.total_budget - p.spent_amount), 0) || 0;
-
-      setUserStats({
-        total_programs: totalPrograms,
-        completed_programs: completedPrograms,
-        total_savings: totalSavings,
-        referral_earnings: 0, // This would come from transactions table
-        current_streak: 5, // This would be calculated based on consecutive days
-      });
-
-    } catch (error: any) {
-      toast.show({
-        title: 'Hata',
-        description: 'Veriler yüklenirken bir hata oluştu.',
-        variant: 'top-accent',
-        bgColor: 'red.500',
-      });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchUserData();
-  };
-
   useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch user programs
+        const { data: programsData, error: programsError } = await supabase
+          .from('programs')
+          .select(`
+            id,
+            title,
+            date,
+            status,
+            total_budget,
+            spent_amount,
+            program_activities(count)
+          `)
+          .eq('user_id', user?.id)
+          .order('date', { ascending: false })
+          .limit(5);
+  
+        if (programsError) throw programsError;
+  
+        // Transform programs data
+        const transformedPrograms = (programsData as SupabaseProgramData[])?.map((program) => ({
+          ...program,
+          activities_count: program.program_activities?.length || 0,
+        })) || [];
+  
+        setPrograms(transformedPrograms);
+  
+        // Fetch recommendations
+        const { data: recommendationsData, error: recommendationsError } = await supabase
+          .from('recommendations')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('score', { ascending: false })
+          .limit(6);
+  
+        if (recommendationsError) throw recommendationsError;
+        setRecommendations(recommendationsData || []);
+  
+        // Calculate user stats
+        const totalPrograms = programsData?.length || 0;
+        const completedPrograms = (programsData as SupabaseProgramData[])?.filter((p) => p.status === 'completed').length || 0;
+        const totalSavings = (programsData as SupabaseProgramData[])?.reduce((sum: number, p) => sum + (p.total_budget - p.spent_amount), 0) || 0;
+  
+        setUserStats({
+          total_programs: totalPrograms,
+          completed_programs: completedPrograms,
+          total_savings: totalSavings,
+          referral_earnings: 0, // This would come from transactions table
+          current_streak: 5, // This would be calculated based on consecutive days
+        });
+  
+      } catch (error: unknown) {
+        let errorMessage = 'Veriler yüklenirken bir hata oluştu.';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+        toast.show({
+          title: 'Hata',
+          description: errorMessage,
+          variant: 'top-accent',
+          bgColor: 'red.500',
+        });
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    };
     fetchUserData();
-  }, [user?.id]);
+  }, [user?.id, toast]);
+
+  const onRefresh = () => {
+    // Burada refresh işlemi yapılabilir
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -601,4 +614,4 @@ export const HomeScreen = () => {
       </ScrollView>
     </Box>
   );
-}; 
+};

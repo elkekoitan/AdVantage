@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { theme } from './src/theme';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { supabase } from './src/services/supabase';
 
 // Keep the splash screen visible while we fetch resources

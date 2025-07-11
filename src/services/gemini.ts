@@ -53,6 +53,14 @@ interface ProgramSuggestion {
   tags: string[];
 }
 
+interface BusinessInsights {
+  insights: string[];
+  recommendations: string[];
+  target_keywords: string[];
+  optimal_times: string[];
+  competitor_analysis: string;
+}
+
 interface RecommendationRequest {
   type: 'restaurant' | 'activity' | 'product' | 'event' | 'program';
   user_preferences: UserPreferences;
@@ -61,6 +69,17 @@ interface RecommendationRequest {
   budget?: number;
   time_preference?: string;
   occasion?: string;
+}
+
+interface GeminiRecommendation {
+  title: string;
+  description: string;
+  reason: string;
+  estimated_price: number;
+  match_score: number;
+  category: string;
+  highlights: string[];
+  type: 'restaurant' | 'activity' | 'product' | 'event' | 'program';
 }
 
 export class GeminiService {
@@ -118,7 +137,7 @@ export class GeminiService {
     }
   }
 
-  async generatePersonalizedRecommendations(request: RecommendationRequest): Promise<any[]> {
+  async generatePersonalizedRecommendations(request: RecommendationRequest): Promise<GeminiRecommendation[]> {
     const { type, user_preferences, context, location, budget, time_preference, occasion } = request;
     
     const prompt = `
@@ -164,7 +183,7 @@ export class GeminiService {
 
     try {
       const response = await this.makeGeminiRequest(prompt);
-      const parsed = JSON.parse(response);
+      const parsed = JSON.parse(response) as { recommendations: GeminiRecommendation[] };
       return parsed.recommendations || [];
     } catch (error) {
       console.error('Failed to generate recommendations:', error);
@@ -246,15 +265,9 @@ export class GeminiService {
     category: string;
     location: string;
     target_audience: string;
-    current_campaigns: any[];
-    analytics_data: any;
-  }): Promise<{
-    insights: string[];
-    recommendations: string[];
-    target_keywords: string[];
-    optimal_times: string[];
-    competitor_analysis: string;
-  } | null> {
+    current_campaigns: Record<string, unknown>[];
+    analytics_data: Record<string, unknown>;
+  }): Promise<BusinessInsights | null> {
     const { name, category, location, target_audience, current_campaigns, analytics_data } = businessData;
     
     const prompt = `
@@ -296,7 +309,7 @@ export class GeminiService {
   }
 
   async generateSocialMediaContent(request: {
-    program_data: any;
+    program_data: Record<string, unknown>;
     user_preferences: UserPreferences;
     platform: 'instagram' | 'facebook' | 'twitter' | 'tiktok';
     content_type: 'post' | 'story' | 'reel';
@@ -343,7 +356,7 @@ export class GeminiService {
     }
   }
 
-  async saveRecommendationsToDatabase(userId: string, recommendations: any[]): Promise<void> {
+  async saveRecommendationsToDatabase(userId: string, recommendations: GeminiRecommendation[]): Promise<void> {
     if (!recommendations || recommendations.length === 0) return;
 
     const recommendationData = recommendations.map(rec => ({
@@ -412,7 +425,7 @@ export class GeminiService {
       const userPreferences = await this.getUserPreferences(userId);
       
       const recommendations = await this.generatePersonalizedRecommendations({
-        type: type as any,
+        type: type,
         user_preferences: userPreferences,
         context: 'Daily recommendations for AdVantage app',
       });

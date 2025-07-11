@@ -61,10 +61,16 @@ export const ForgotPasswordScreen = () => {
         variant: 'top-accent',
         bgColor: 'green.500',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorMessage = 'Bir hata oluştu. Lütfen tekrar deneyin.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       toast.show({
         title: 'Hata',
-        description: error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        description: errorMessage,
         variant: 'top-accent',
         bgColor: 'red.500',
       });
