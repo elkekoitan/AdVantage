@@ -29,7 +29,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
 
-import { useAuth } from '../../contexts/AuthContext';
+// Remove unused import
 import { supabase } from '../../services/supabase';
 
 type ProgramDetailsScreenNavigationProp = NativeStackNavigationProp<any, 'ProgramDetails'>;
@@ -797,7 +797,7 @@ export const ProgramDetailsScreen = () => {
       </ScrollView>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog isOpen={isDeleteOpen} onClose={onDeleteClose} leastDestructiveRef={undefined}>
+      <AlertDialog isOpen={isDeleteOpen} onClose={onDeleteClose} leastDestructiveRef={React.createRef()}>
         <AlertDialog.Content>
           <AlertDialog.CloseButton />
           <AlertDialog.Header>Programı Sil</AlertDialog.Header>
