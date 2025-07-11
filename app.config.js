@@ -33,7 +33,6 @@ export default {
       permissions: [
         'ACCESS_COARSE_LOCATION',
         'ACCESS_FINE_LOCATION',
-        'CAMERA',
         'READ_EXTERNAL_STORAGE',
         'WRITE_EXTERNAL_STORAGE',
       ],
@@ -43,7 +42,6 @@ export default {
     },
     plugins: [
       'expo-location',
-      'expo-camera',
       'expo-image-picker',
       'expo-secure-store',
       [
