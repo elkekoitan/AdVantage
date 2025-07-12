@@ -260,6 +260,136 @@ export class GeminiService {
     }
   }
 
+  async generateBudgetProgram(request: {
+    user_preferences: UserPreferences;
+    budget: number;
+    duration: string;
+    location: string;
+    occasion?: string;
+    group_size?: number;
+    program_type: 'daily' | 'weekly' | 'monthly';
+    categories?: string[];
+  }): Promise<ProgramSuggestion | null> {
+    const { user_preferences, budget, duration, location, occasion, group_size, program_type, categories } = request;
+    
+    const prompt = `
+      Sen bir AI bütçe planlama ve harcama optimizasyonu uzmanısın. Kullanıcının bütçesine göre akıllı harcama programı oluştur.
+      
+      Kullanıcı Profili:
+      - Yaş: ${user_preferences.age || 'Belirtilmemiş'}
+      - Cinsiyet: ${user_preferences.gender || 'Belirtilmemiş'}
+      - İlgi Alanları: ${user_preferences.interests?.join(', ') || 'Belirtilmemiş'}
+      - Tercih Edilen Kategoriler: ${categories?.join(', ') || 'Belirtilmemiş'}
+      
+      Program Parametreleri:
+      - Toplam Bütçe: ₺${budget}
+      - Süre: ${duration}
+      - Lokasyon: ${location}
+      - Program Türü: ${program_type}
+      - Özel Durum: ${occasion || 'Normal'}
+      - Grup Büyüklüğü: ${group_size || 1} kişi
+      
+      Lütfen bu bilgilere göre bütçe dostu ve optimize edilmiş bir harcama programı oluştur.
+      Program şu kategorileri içerebilir:
+      - Gıda ve İçecek
+      - Eğlence ve Aktiviteler
+      - Alışveriş
+      - Ulaşım
+      - Kişisel Bakım
+      - Diğer
+      
+      Bütçeyi akıllıca dağıt ve her aktivite için gerçekçi maliyetler belirle.
+      
+      Yanıtını JSON formatında ver:
+      {
+        "title": "Bütçe Program Başlığı",
+        "description": "Program açıklaması ve bütçe stratejisi",
+        "activities": [
+          {
+            "type": "food/entertainment/shopping/transport/personal_care/other",
+            "title": "Aktivite/Harcama Adı",
+            "description": "Detaylı açıklama ve neden bu harcama",
+            "estimated_duration": "süre",
+            "estimated_cost": 100,
+            "time_of_day": "morning/afternoon/evening/anytime",
+            "priority": "high/medium/low",
+            "category": "kategori"
+          }
+        ],
+        "total_estimated_cost": ${budget},
+        "total_duration": "${duration}",
+        "difficulty_level": "easy",
+        "budget_breakdown": {
+          "food": 40,
+          "entertainment": 30,
+          "shopping": 20,
+          "other": 10
+        },
+        "savings_tips": ["tasarruf önerisi 1", "tasarruf önerisi 2"],
+        "tags": ["budget-friendly", "optimized", "practical"]
+      }
+    `;
+
+    try {
+      const response = await this.makeGeminiRequest(prompt);
+      const parsed = JSON.parse(response);
+      return parsed;
+    } catch (error) {
+      console.error('Failed to generate budget program:', error);
+      return null;
+    }
+  }
+
+  async optimizeProgramBudget(activities: any[], targetBudget: number): Promise<any[]> {
+    const currentTotal = activities.reduce((sum, activity) => sum + (activity.estimated_cost || 0), 0);
+    
+    if (currentTotal <= targetBudget) {
+      return activities;
+    }
+
+    const prompt = `
+      Sen bir AI bütçe optimizasyon uzmanısın. Aşağıdaki aktivite listesini ${targetBudget} ₺ bütçeye uyacak şekilde optimize et.
+      
+      Mevcut Aktiviteler:
+      ${JSON.stringify(activities, null, 2)}
+      
+      Mevcut Toplam: ₺${currentTotal}
+      Hedef Bütçe: ₺${targetBudget}
+      
+      Lütfen şunları yap:
+      1. Aktivitelerin maliyetlerini azalt
+      2. Gerekirse bazı aktiviteleri kaldır
+      3. Daha uygun fiyatlı alternatifler öner
+      4. Bütçe dağılımını optimize et
+      
+      Yanıtını JSON formatında ver:
+      {
+        "optimized_activities": [
+          {
+            "type": "activity_type",
+            "title": "Aktivite Adı",
+            "description": "Açıklama",
+            "estimated_duration": "süre",
+            "estimated_cost": 100,
+            "optimization_note": "Ne değiştirildi"
+          }
+        ],
+        "total_cost": ${targetBudget},
+        "savings_achieved": ${currentTotal - targetBudget},
+        "optimization_summary": "Optimizasyon özeti"
+      }
+    `;
+
+    try {
+      const response = await this.makeGeminiRequest(prompt);
+      const parsed = JSON.parse(response);
+      return parsed.optimized_activities || activities;
+    } catch (error) {
+      console.error('Failed to optimize program budget:', error);
+      return activities;
+    }
+  }
+
   async generateBusinessInsights(businessData: {
     name: string;
     category: string;

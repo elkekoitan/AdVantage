@@ -104,6 +104,8 @@ export const CreateProgramScreen = () => {
     occasion: '',
     groupSize: 1,
     activityTypes: [] as string[],
+    programType: 'personal_development' as 'personal_development' | 'fitness_health' | 'education_learning' | 'hobby_creativity' | 'social_entertainment' | 'business_career' | 'travel_exploration' | 'family_relationships',
+    priorityCategories: [] as string[],
   });
 
   // Templates
@@ -254,33 +256,43 @@ export const CreateProgramScreen = () => {
       
       const userPreferences = await geminiService.getUserPreferences(user.id);
       
+      // Determine program type based on duration
+      let programType: 'daily' | 'weekly' | 'monthly' = 'daily';
+      if (aiPreferences.duration.includes('hafta')) {
+        programType = 'weekly';
+      } else if (aiPreferences.duration.includes('ay')) {
+        programType = 'monthly';
+      }
+      
       const aiRequest = {
         user_preferences: {
           ...userPreferences,
           interests: aiPreferences.interests.length > 0 ? aiPreferences.interests : userPreferences.interests,
           activity_types: aiPreferences.activityTypes.length > 0 ? aiPreferences.activityTypes : ['restoran', 'eğlence', 'alışveriş'],
         },
-        date: new Date().toISOString().split('T')[0],
-        location: aiPreferences.location || 'İstanbul',
         budget: aiPreferences.budget,
         duration: aiPreferences.duration,
+        location: aiPreferences.location || 'İstanbul',
         occasion: aiPreferences.occasion,
         group_size: aiPreferences.groupSize,
+        program_type: programType,
+        categories: aiPreferences.interests,
       };
 
-      const suggestion = await geminiService.generateDailyProgram(aiRequest);
+      // Use the new budget-focused program generator
+      const suggestion = await geminiService.generateBudgetProgram(aiRequest);
       
       if (suggestion) {
-        // Budget optimization if needed
+        // Advanced budget optimization if needed
         if (suggestion.total_estimated_cost > aiPreferences.budget) {
-          // Simple budget optimization by scaling down costs proportionally
-          const scaleFactor = aiPreferences.budget / suggestion.total_estimated_cost;
-          suggestion.activities = suggestion.activities.map((activity: any) => ({
-            ...activity,
-            estimated_cost: Math.round(activity.estimated_cost * scaleFactor)
-          }));
-          suggestion.total_estimated_cost = suggestion.activities.reduce(
-            (total: number, activity: any) => total + activity.estimated_cost,
+          const optimizedActivities = await geminiService.optimizeProgramBudget(
+            suggestion.activities,
+            aiPreferences.budget
+          );
+          
+          suggestion.activities = optimizedActivities;
+          suggestion.total_estimated_cost = optimizedActivities.reduce(
+            (total: number, activity: any) => total + (activity.estimated_cost || 0),
             0
           );
         }
@@ -464,7 +476,12 @@ export const CreateProgramScreen = () => {
     <Modal isOpen={showAiModal} onClose={() => setShowAiModal(false)} size="full">
       <Modal.Content>
         <Modal.CloseButton />
-        <Modal.Header>AI Program Önerisi</Modal.Header>
+        <Modal.Header>
+          <HStack space={2} alignItems="center">
+            <Icon as={MaterialIcons} name="auto-awesome" size={5} color="primary.500" />
+            <Text fontSize="lg" fontWeight="bold">AI Program Önerisi</Text>
+          </HStack>
+        </Modal.Header>
         <Modal.Body>
           {aiSuggestions && (
             <VStack space={4}>
@@ -477,40 +494,118 @@ export const CreateProgramScreen = () => {
                 </Text>
               </VStack>
               
-              <HStack justifyContent="space-between">
-                <Text fontSize="sm" color="gray.500">
-                  Toplam Bütçe: ₺{aiSuggestions.total_estimated_cost?.toLocaleString()}
-                </Text>
-                <Text fontSize="sm" color="gray.500">
-                  Süre: {aiSuggestions.total_duration}
-                </Text>
-              </HStack>
+              {/* Budget Summary Card */}
+              <Card bg="primary.50" borderColor="primary.200" borderWidth={1}>
+                <VStack space={3} p={4}>
+                  <Text fontSize="md" fontWeight="semibold" color="primary.700">
+                    Bütçe Özeti
+                  </Text>
+                  <HStack justifyContent="space-between">
+                    <Text fontSize="sm" color="gray.600">
+                      Toplam Bütçe:
+                    </Text>
+                    <Text fontSize="sm" fontWeight="bold" color="primary.600">
+                      ₺{aiSuggestions.total_estimated_cost?.toLocaleString()}
+                    </Text>
+                  </HStack>
+                  <HStack justifyContent="space-between">
+                    <Text fontSize="sm" color="gray.600">
+                      Program Süresi:
+                    </Text>
+                    <Text fontSize="sm" fontWeight="semibold" color="gray.700">
+                      {aiSuggestions.total_duration}
+                    </Text>
+                  </HStack>
+                  
+                  {/* Budget Breakdown */}
+                  {aiSuggestions.budget_breakdown && (
+                    <VStack space={2}>
+                      <Text fontSize="sm" fontWeight="semibold" color="gray.700">
+                        Bütçe Dağılımı:
+                      </Text>
+                      {Object.entries(aiSuggestions.budget_breakdown).map(([category, percentage]: [string, any]) => (
+                        <HStack key={category} justifyContent="space-between" alignItems="center">
+                          <Text fontSize="xs" color="gray.600" textTransform="capitalize">
+                            {category}:
+                          </Text>
+                          <Text fontSize="xs" color="primary.600">
+                            %{percentage}
+                          </Text>
+                        </HStack>
+                      ))}
+                    </VStack>
+                  )}
+                </VStack>
+              </Card>
               
               <VStack space={3}>
                 <Text fontSize="md" fontWeight="semibold" color="gray.700">
-                  Önerilen Aktiviteler:
+                  Önerilen Aktiviteler ({aiSuggestions.activities?.length || 0}):
                 </Text>
                 {aiSuggestions.activities?.map((activity: any, index: number) => (
-                  <Card key={index}>
+                  <Card key={index} borderLeftWidth={3} borderLeftColor={activity.priority === 'high' ? 'red.400' : activity.priority === 'medium' ? 'orange.400' : 'green.400'}>
                     <VStack space={2} p={3}>
-                      <Text fontSize="md" fontWeight="semibold">
-                        {activity.title}
-                      </Text>
-                      <Text fontSize="sm" color="gray.600">
-                        {activity.description}
-                      </Text>
-                      <HStack justifyContent="space-between">
-                        <Text fontSize="xs" color="gray.500">
-                          {activity.estimated_duration}
-                        </Text>
-                        <Text fontSize="xs" color="primary.500">
-                          ₺{activity.estimated_cost}
+                      <HStack justifyContent="space-between" alignItems="flex-start">
+                        <VStack flex={1} space={1}>
+                          <Text fontSize="md" fontWeight="semibold">
+                            {activity.title}
+                          </Text>
+                          <Text fontSize="sm" color="gray.600">
+                            {activity.description}
+                          </Text>
+                        </VStack>
+                        {activity.priority && (
+                          <Badge 
+                            colorScheme={activity.priority === 'high' ? 'red' : activity.priority === 'medium' ? 'orange' : 'green'}
+                            variant="subtle"
+                            size="sm"
+                          >
+                            {activity.priority === 'high' ? 'Yüksek' : activity.priority === 'medium' ? 'Orta' : 'Düşük'}
+                          </Badge>
+                        )}
+                      </HStack>
+                      
+                      <HStack justifyContent="space-between" alignItems="center">
+                        <HStack space={2} alignItems="center">
+                          {activity.category && (
+                            <Badge colorScheme="gray" variant="outline" size="sm">
+                              {activity.category}
+                            </Badge>
+                          )}
+                          <Text fontSize="xs" color="gray.500">
+                            {activity.estimated_duration}
+                          </Text>
+                        </HStack>
+                        <Text fontSize="sm" fontWeight="bold" color="primary.500">
+                          ₺{activity.estimated_cost?.toLocaleString()}
                         </Text>
                       </HStack>
+                      
+                      {activity.optimization_note && (
+                        <Text fontSize="xs" color="blue.600" italic>
+                          💡 {activity.optimization_note}
+                        </Text>
+                      )}
                     </VStack>
                   </Card>
                 ))}
               </VStack>
+              
+              {/* Savings Tips */}
+              {aiSuggestions.savings_tips && aiSuggestions.savings_tips.length > 0 && (
+                <Card bg="green.50" borderColor="green.200" borderWidth={1}>
+                  <VStack space={2} p={3}>
+                    <Text fontSize="sm" fontWeight="semibold" color="green.700">
+                      💰 Tasarruf İpuçları:
+                    </Text>
+                    {aiSuggestions.savings_tips.map((tip: string, index: number) => (
+                      <Text key={index} fontSize="xs" color="green.600">
+                        • {tip}
+                      </Text>
+                    ))}
+                  </VStack>
+                </Card>
+              )}
               
               {aiSuggestions.tags && (
                 <HStack space={2} flexWrap="wrap">
@@ -529,7 +624,10 @@ export const CreateProgramScreen = () => {
             <Button variant="ghost" onPress={() => setShowAiModal(false)}>
               İptal
             </Button>
-            <Button onPress={handleAcceptAiSuggestion}>
+            <Button 
+              onPress={handleAcceptAiSuggestion}
+              leftIcon={<Icon as={MaterialIcons} name="check" size={4} />}
+            >
               Bu Öneriye Kabul Et
             </Button>
           </Button.Group>
@@ -626,6 +724,62 @@ export const CreateProgramScreen = () => {
         </FormControl>
 
         <FormControl>
+          <FormControl.Label>Program Türü</FormControl.Label>
+          <Select
+            selectedValue={aiPreferences.programType}
+            onValueChange={(value) => setAiPreferences({...aiPreferences, programType: value})}
+            placeholder="Program türü seçin"
+          >
+            <Select.Item label="Kişisel Gelişim" value="personal_development" />
+            <Select.Item label="Fitness & Sağlık" value="fitness_health" />
+            <Select.Item label="Eğitim & Öğrenme" value="education_learning" />
+            <Select.Item label="Hobi & Yaratıcılık" value="hobby_creativity" />
+            <Select.Item label="Sosyal & Eğlence" value="social_entertainment" />
+            <Select.Item label="İş & Kariyer" value="business_career" />
+            <Select.Item label="Seyahat & Keşif" value="travel_exploration" />
+            <Select.Item label="Aile & İlişkiler" value="family_relationships" />
+          </Select>
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Öncelik Kategorileri (En fazla 3 seçin)</FormControl.Label>
+          <VStack space={2}>
+            {[
+              { label: 'Maliyet Optimizasyonu', value: 'cost_optimization' },
+              { label: 'Zaman Verimliliği', value: 'time_efficiency' },
+              { label: 'Kalite & Etki', value: 'quality_impact' },
+              { label: 'Esneklik', value: 'flexibility' },
+              { label: 'Sosyal Etkileşim', value: 'social_interaction' },
+              { label: 'Kişisel Büyüme', value: 'personal_growth' }
+            ].map((category) => (
+              <Checkbox
+                key={category.value}
+                value={category.value}
+                isChecked={aiPreferences.priorityCategories.includes(category.value)}
+                onChange={(isChecked) => {
+                  if (isChecked && aiPreferences.priorityCategories.length < 3) {
+                    setAiPreferences({
+                      ...aiPreferences,
+                      priorityCategories: [...aiPreferences.priorityCategories, category.value]
+                    });
+                  } else if (!isChecked) {
+                    setAiPreferences({
+                      ...aiPreferences,
+                      priorityCategories: aiPreferences.priorityCategories.filter(c => c !== category.value)
+                    });
+                  }
+                }}
+                isDisabled={!aiPreferences.priorityCategories.includes(category.value) && aiPreferences.priorityCategories.length >= 3}
+              >
+                <Text fontSize="sm" color="gray.700">
+                  {category.label}
+                </Text>
+              </Checkbox>
+            ))}
+          </VStack>
+        </FormControl>
+
+        <FormControl>
           <FormControl.Label>İlgi Alanları</FormControl.Label>
           <VStack space={2}>
             {['Yemek', 'Kültür', 'Spor', 'Doğa', 'Alışveriş', 'Eğlence', 'Sanat', 'Tarih'].map((interest) => (
@@ -688,8 +842,18 @@ export const CreateProgramScreen = () => {
         isLoadingText="AI Önerisi Oluşturuluyor..."
         leftIcon={<Icon as={MaterialIcons} name="auto-awesome" size={5} />}
         size="lg"
+        bg="gradient.primary"
+        _pressed={{ bg: "primary.600" }}
+        shadow={3}
       >
-        AI ile Program Oluştur
+        <VStack space={1} alignItems="center">
+          <Text fontSize="md" fontWeight="bold" color="white">
+            AI ile Akıllı Program Oluştur
+          </Text>
+          <Text fontSize="xs" color="primary.100">
+            Bütçe optimizasyonu ve kişiselleştirilmiş öneriler
+          </Text>
+        </VStack>
       </Button>
     </VStack>
   );
