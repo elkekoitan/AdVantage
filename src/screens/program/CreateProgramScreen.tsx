@@ -727,7 +727,7 @@ export const CreateProgramScreen = () => {
           <FormControl.Label>Program Türü</FormControl.Label>
           <Select
             selectedValue={aiPreferences.programType}
-            onValueChange={(value) => setAiPreferences({...aiPreferences, programType: value})}
+            onValueChange={(value: string) => setAiPreferences({...aiPreferences, programType: value as any})}
             placeholder="Program türü seçin"
           >
             <Select.Item label="Kişisel Gelişim" value="personal_development" />
@@ -756,7 +756,7 @@ export const CreateProgramScreen = () => {
                 key={category.value}
                 value={category.value}
                 isChecked={aiPreferences.priorityCategories.includes(category.value)}
-                onChange={(isChecked) => {
+                onChange={(isChecked: boolean) => {
                   if (isChecked && aiPreferences.priorityCategories.length < 3) {
                     setAiPreferences({
                       ...aiPreferences,
@@ -787,7 +787,7 @@ export const CreateProgramScreen = () => {
                 key={interest}
                 value={interest}
                 isChecked={aiPreferences.interests.includes(interest)}
-                onChange={(isChecked) => {
+                onChange={(isChecked: boolean) => {
                   if (isChecked) {
                     setAiPreferences({
                       ...aiPreferences,
@@ -815,7 +815,7 @@ export const CreateProgramScreen = () => {
                 key={activityType}
                 value={activityType}
                 isChecked={aiPreferences.activityTypes.includes(activityType)}
-                onChange={(isChecked) => {
+                onChange={(isChecked: boolean) => {
                   if (isChecked) {
                     setAiPreferences({
                       ...aiPreferences,

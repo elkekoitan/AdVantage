@@ -29,6 +29,7 @@ import { ProgramDetailsScreen } from '../screens/programs/ProgramDetailsScreen';
 import { CreateProgramScreen } from '../screens/programs/CreateProgramScreen';
 import { CompanyDetailsScreen } from '../screens/companies/CompanyDetailsScreen';
 import { CampaignDetailsScreen } from '../screens/campaigns/CampaignDetailsScreen';
+import SocialShareScreen from '../screens/social/SocialShareScreen';
 
 // Type definitions
 export type MainTabParamList = {
@@ -53,6 +54,7 @@ export type MainStackParamList = {
   Notifications: undefined;
   Chat: { chatId?: string; chatType?: 'direct' | 'group' | 'program'; participantId?: string; programId?: string };
   ActivityDetail: { activityId: string };
+  SocialShare: { program: any };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -215,6 +217,15 @@ export const MainNavigator = () => {
         options={{
           animation: 'slide_from_right',
           headerTitle: 'Aktivite Detayları',
+        }}
+      />
+      <Stack.Screen
+        name="SocialShare"
+        component={SocialShareScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          presentation: 'modal',
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

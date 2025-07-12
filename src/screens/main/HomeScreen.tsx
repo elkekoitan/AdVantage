@@ -639,17 +639,28 @@ export const HomeScreen = () => {
                               </Text>
                             </HStack>
                           </VStack>
-                          <Box
-                            bg={`${getStatusColor(program.status)}.500`}
-                            px={3}
-                            py={1}
-                            rounded="md"
-                            ml={3}
-                          >
-                            <Text fontSize="xs" color="white" fontWeight="500">
-                              {getStatusText(program.status)}
-                            </Text>
-                          </Box>
+                          <HStack space={2} alignItems="center">
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                navigation.navigate('SocialShare', { program });
+                              }}
+                              _pressed={{ opacity: 0.6 }}
+                              p={2}
+                            >
+                              <MaterialIcons name="share" size={20} color={theme.colors.primary[500]} />
+                            </Pressable>
+                            <Box
+                              bg={`${getStatusColor(program.status)}.500`}
+                              px={3}
+                              py={1}
+                              rounded="md"
+                            >
+                              <Text fontSize="xs" color="white" fontWeight="500">
+                                {getStatusText(program.status)}
+                              </Text>
+                            </Box>
+                          </HStack>
                         </HStack>
                         {program.total_budget > 0 && (
                           <VStack space={2}>
@@ -796,21 +807,30 @@ export const HomeScreen = () => {
                   </VStack>
                 </HStack>
               </Card>
-              <Card variant="glass" padding={4}>
-                <HStack space={4} alignItems="center">
-                  <Box bg="success.100" p={3} rounded="full">
-                    <MaterialIcons name="share" size={24} color={theme.colors.success[500]} />
-                  </Box>
-                  <VStack space={1} flex={1}>
-                    <Text fontSize="md" color={textColor} fontWeight="600">
-                      Sosyal Paylaşım
-                    </Text>
-                    <Text fontSize="sm" color={mutedColor}>
-                      Programlarınızı sosyal medyada paylaşın
-                    </Text>
-                  </VStack>
-                </HStack>
-              </Card>
+              <Pressable onPress={() => {
+                if (programs.length > 0) {
+                  navigation.navigate('SocialShare', { program: programs[0] });
+                } else {
+                  Alert.alert('Bilgi', 'Paylaşmak için önce bir program oluşturun!');
+                }
+              }}>
+                <Card variant="glass" padding={4}>
+                  <HStack space={4} alignItems="center">
+                    <Box bg="success.100" p={3} rounded="full">
+                      <MaterialIcons name="share" size={24} color={theme.colors.success[500]} />
+                    </Box>
+                    <VStack space={1} flex={1}>
+                      <Text fontSize="md" color={textColor} fontWeight="600">
+                        Sosyal Paylaşım
+                      </Text>
+                      <Text fontSize="sm" color={mutedColor}>
+                        Programlarınızı sosyal medyada paylaşın
+                      </Text>
+                    </VStack>
+                    <Icon as={Ionicons} name="chevron-forward" size="sm" color={mutedColor} />
+                  </HStack>
+                </Card>
+              </Pressable>
               <Card variant="glass" padding={4}>
                 <HStack space={4} alignItems="center">
                   <Box bg="secondary.100" p={3} rounded="full">
