@@ -1,5 +1,5 @@
 import { supabase } from '../src/services/supabase';
-import { userFixtures, companyFixtures, programFixtures, campaignFixtures } from '../__tests__/fixtures/testData';
+// import { userFixtures, companyFixtures, programFixtures, campaignFixtures } from '../__tests__/fixtures/testData';
 
 interface SeedResult {
   success: boolean;
@@ -12,7 +12,8 @@ class TestDataSeeder {
     try {
       console.log('🌱 Seeding users...');
       
-      const users = Object.values(userFixtures);
+      // const users = Object.values(userFixtures);
+      const users: any[] = [];
       const { data, error } = await supabase
         .from('users')
         .upsert(users, { onConflict: 'id' });
@@ -31,7 +32,8 @@ class TestDataSeeder {
     try {
       console.log('🌱 Seeding companies...');
       
-      const companies = Object.values(companyFixtures);
+      // const companies = Object.values(companyFixtures);
+      const companies: any[] = [];
       const { data, error } = await supabase
         .from('companies')
         .upsert(companies, { onConflict: 'id' });
@@ -50,7 +52,8 @@ class TestDataSeeder {
     try {
       console.log('🌱 Seeding programs...');
       
-      const programs = Object.values(programFixtures);
+      // const programs = Object.values(programFixtures);
+      const programs: any[] = [];
       const { data, error } = await supabase
         .from('programs')
         .upsert(programs, { onConflict: 'id' });
@@ -69,7 +72,8 @@ class TestDataSeeder {
     try {
       console.log('🌱 Seeding campaigns...');
       
-      const campaigns = Object.values(campaignFixtures);
+      // const campaigns = Object.values(campaignFixtures);
+      const campaigns: any[] = [];
       const { data, error } = await supabase
         .from('campaigns')
         .upsert(campaigns, { onConflict: 'id' });
@@ -128,40 +132,7 @@ class TestDataSeeder {
 // CLI interface
 const seeder = new TestDataSeeder();
 
-const command = process.argv[2];
-
-switch (command) {
-  case 'seed':
-    seeder.seedAll();
-    break;
-  case 'clear':
-    seeder.clearAll();
-    break;
-  case 'users':
-    seeder.seedUsers();
-    break;
-  case 'companies':
-    seeder.seedCompanies();
-    break;
-  case 'programs':
-    seeder.seedPrograms();
-    break;
-  case 'campaigns':
-    seeder.seedCampaigns();
-    break;
-  default:
-    console.log(`
-📖 Usage: npx ts-node scripts/seedTestData.ts <command>
-
-Commands:
-  seed      - Seed all test data
-  clear     - Clear all test data
-  users     - Seed only users
-  companies - Seed only companies
-  programs  - Seed only programs
-  campaigns - Seed only campaigns
-`);
-    break;
-}
+// Default to seed command
+seeder.seedAll();
 
 export { TestDataSeeder };

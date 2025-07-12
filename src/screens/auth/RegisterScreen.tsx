@@ -1,84 +1,93 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Platform,
+  Animated,
+  StatusBar,
+} from 'react-native';
 import {
   Box,
   VStack,
-  Heading,
+  HStack,
   Text,
   Input,
   Button,
-  HStack,
-  Link,
-  useToast,
-  KeyboardAvoidingView,
-  ScrollView,
-  Icon,
   Pressable,
-  Select,
-  Checkbox,
+  ScrollView,
+  KeyboardAvoidingView,
+  Icon,
+  useToast,
   FormControl,
-  WarningOutlineIcon,
 } from 'native-base';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
-import { Platform } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MaterialIcons } from '@expo/vector-icons';
-// import DateTimePicker from '@react-native-community/datetimepicker';
-
 import { useAuth } from '../../contexts/AuthContext';
-import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import type { AuthStackParamList } from '../../types/navigation';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
-interface FormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  fullName: string;
-  username: string;
-  phone: string;
-  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined;
-  dateOfBirth: string;
-  acceptTerms: boolean;
-  acceptMarketing: boolean;
-}
-
-interface FormErrors {
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  fullName?: string;
-  username?: string;
-  phone?: string;
-  acceptTerms?: string;
-}
-
-export const RegisterScreen = () => {
+const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
-  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
+  const { register } = useAuth();
   const toast = useToast();
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    fullName: '',
-    username: '',
-    phone: '',
-    gender: undefined,
-    dateOfBirth: '',
-    acceptTerms: false,
-    acceptMarketing: false,
+    phoneNumber: '',
   });
 
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [appleLoading, setAppleLoading] = useState(false);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+    const newErrors: { [key: string]: string } = {};
+
+    // First name validation
+    if (!formData.firstName) {
+      newErrors.firstName = 'Ad gereklidir';
+    } else if (formData.firstName.length < 2) {
+      newErrors.firstName = 'Ad en az 2 karakter olmalıdır';
+    }
+
+    // Last name validation
+    if (!formData.lastName) {
+      newErrors.lastName = 'Soyad gereklidir';
+    } else if (formData.lastName.length < 2) {
+      newErrors.lastName = 'Soyad en az 2 karakter olmalıdır';
+    }
 
     // Email validation
     if (!formData.email) {
@@ -87,13 +96,20 @@ export const RegisterScreen = () => {
       newErrors.email = 'Geçerli bir e-posta adresi giriniz';
     }
 
+    // Phone validation
+    if (!formData.phoneNumber) {
+      newErrors.phoneNumber = 'Telefon numarası gereklidir';
+    } else if (!/^[0-9]{10,11}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
+      newErrors.phoneNumber = 'Geçerli bir telefon numarası giriniz';
+    }
+
     // Password validation
     if (!formData.password) {
       newErrors.password = 'Şifre gereklidir';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Şifre en az 8 karakter olmalıdır';
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Şifre en az 1 büyük harf, 1 küçük harf ve 1 rakam içermelidir';
+      newErrors.password = 'Şifre en az bir büyük harf, bir küçük harf ve bir rakam içermelidir';
     }
 
     // Confirm password validation
@@ -101,32 +117,6 @@ export const RegisterScreen = () => {
       newErrors.confirmPassword = 'Şifre tekrarı gereklidir';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Şifreler eşleşmiyor';
-    }
-
-    // Full name validation
-    if (!formData.fullName) {
-      newErrors.fullName = 'Ad soyad gereklidir';
-    } else if (formData.fullName.length < 2) {
-      newErrors.fullName = 'Ad soyad en az 2 karakter olmalıdır';
-    }
-
-    // Username validation
-    if (!formData.username) {
-      newErrors.username = 'Kullanıcı adı gereklidir';
-    } else if (formData.username.length < 3) {
-      newErrors.username = 'Kullanıcı adı en az 3 karakter olmalıdır';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = 'Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir';
-    }
-
-    // Phone validation
-    if (formData.phone && !/^\+?[1-9]\d{1,14}$/.test(formData.phone)) {
-      newErrors.phone = 'Geçerli bir telefon numarası giriniz';
-    }
-
-    // Terms validation
-    if (!formData.acceptTerms) {
-      newErrors.acceptTerms = 'Kullanım koşullarını kabul etmelisiniz';
     }
 
     setErrors(newErrors);
@@ -138,435 +128,354 @@ export const RegisterScreen = () => {
 
     setLoading(true);
     try {
-      await signUp(formData.email, formData.password, {
-        fullName: formData.fullName,
-        username: formData.username,
-        phone: formData.phone,
-        gender: formData.gender,
-        dateOfBirth: formData.dateOfBirth,
-        acceptMarketing: formData.acceptMarketing,
+      await register(formData.email, formData.password, {
+        fullName: `${formData.firstName} ${formData.lastName}`,
+        phone: formData.phoneNumber,
       });
 
       toast.show({
-        title: 'Kayıt Başarılı',
-        description: 'Hesabınız oluşturuldu.',
-        colorScheme: 'success',
+        title: 'Başarılı!',
+        description: 'Hesabınız başarıyla oluşturuldu. Giriş yapabilirsiniz.'
       });
-
-      // Navigation will be handled by AuthContext
-    } catch (error: unknown) {
-      let errorMessage = 'Bir hata oluştu';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
+      
+      navigation.navigate('Login' as any);
+    } catch (error: any) {
       toast.show({
         title: 'Hata',
-        description: errorMessage,
-        colorScheme: 'error',
+        description: error.message || 'Kayıt olurken bir hata oluştu'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const updateFormData = (key: keyof FormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
-    if (errors[key as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [key]: undefined }));
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (error: unknown) {
-      let errorMessage = 'Google ile kayıt başarısız';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.show({
-        title: 'Kayıt Başarısız',
-        description: errorMessage,
-        colorScheme: 'error',
-      });
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleAppleSignUp = async () => {
-    setAppleLoading(true);
-    try {
-      await signInWithApple();
-    } catch (error: unknown) {
-      let errorMessage = 'Apple ile kayıt başarısız';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.show({
-        title: 'Kayıt Başarısız',
-        description: errorMessage,
-        colorScheme: 'error',
-      });
-    } finally {
-      setAppleLoading(false);
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       flex={1}
+      bg="blue.500"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={['#0ea5e9', '#0284c7', '#0369a1', '#075985']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+      />
+      
+      {/* Decorative Elements */}
+      <Box
+        position="absolute"
+        top={-100}
+        right={-100}
+        w={200}
+        h={200}
+        borderRadius={100}
+        bg="rgba(255, 255, 255, 0.1)"
+      />
+      <Box
+        position="absolute"
+        bottom={-80}
+        left={-80}
+        w={160}
+        h={160}
+        borderRadius={80}
+        bg="rgba(255, 255, 255, 0.08)"
+      />
+      
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        flex={1}
+        px={5}
+        pb={10}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Box flex={1} bg="white" safeArea>
-          <VStack flex={1} px={6} py={4} space={4}>
-            {/* Header */}
-            <VStack space={2} alignItems="center" mt={4}>
-              <Heading size="2xl" fontWeight="bold" color="primary.600">
-                Hesap Oluştur
-              </Heading>
-              <Text fontSize="md" color="gray.600" textAlign="center">
-                AdVantage&apos;a katılın ve kişiselleştirilmiş deneyimler keşfedin
+        {/* Header */}
+        <HStack
+          alignItems="center"
+          pt={Platform.OS === 'ios' ? 60 : 40}
+          pb={5}
+        >
+          <Pressable
+            w={11}
+            h={11}
+            borderRadius={22}
+            bg="rgba(255, 255, 255, 0.2)"
+            justifyContent="center"
+            alignItems="center"
+            mr={4}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon as={MaterialIcons} name="arrow-back" size={6} color="white" />
+          </Pressable>
+          <Text fontSize="2xl" fontWeight="bold" color="white" flex={1}>
+            Hesap Oluştur
+          </Text>
+        </HStack>
+        
+        {/* Main Content */}
+        <Box flex={1} justifyContent="center">
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            }}
+          >
+            <Box
+              borderRadius={24}
+              overflow="hidden"
+              my={5}
+              p={6}
+              bg="rgba(255, 255, 255, 0.1)"
+              borderWidth={1}
+              borderColor="rgba(255, 255, 255, 0.2)"
+            >
+              {/* Icon and Title */}
+              <VStack alignItems="center" mb={6}>
+                <Icon as={MaterialIcons} name="person-add" size={60} color="white" />
+              </VStack>
+              
+              <Text fontSize="3xl" fontWeight="bold" color="white" textAlign="center" mb={2}>
+                Yeni Hesap Oluşturun
               </Text>
-            </VStack>
-
-            {/* Form */}
-            <VStack space={4}>
-              {/* Full Name */}
-              <FormControl isRequired isInvalid={!!errors.fullName}>
-                <FormControl.Label>Ad Soyad</FormControl.Label>
-                <Input
-                  placeholder="Ad Soyad"
-                  size="lg"
-                  value={formData.fullName}
-                  onChangeText={(text) => updateFormData('fullName', text)}
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="person"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                />
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.fullName}
-                </FormControl.ErrorMessage>
-              </FormControl>
-
-              {/* Username */}
-              <FormControl isRequired isInvalid={!!errors.username}>
-                <FormControl.Label>Kullanıcı Adı</FormControl.Label>
-                <Input
-                  placeholder="Kullanıcı Adı"
-                  size="lg"
-                  value={formData.username}
-                  onChangeText={(text) => updateFormData('username', text.toLowerCase())}
-                  autoCapitalize="none"
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="alternate-email"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                />
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.username}
-                </FormControl.ErrorMessage>
-              </FormControl>
-
-              {/* Email */}
-              <FormControl isRequired isInvalid={!!errors.email}>
-                <FormControl.Label>E-posta</FormControl.Label>
-                <Input
-                  testID="email-input"
-                  placeholder="E-posta"
-                  size="lg"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={formData.email}
-                  onChangeText={(text) => updateFormData('email', text)}
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="email"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                />
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.email}
-                </FormControl.ErrorMessage>
-              </FormControl>
-
-              {/* Phone */}
-              <FormControl isInvalid={!!errors.phone}>
-                <FormControl.Label>Telefon (Opsiyonel)</FormControl.Label>
-                <Input
-                  placeholder="Telefon Numarası"
-                  size="lg"
-                  keyboardType="phone-pad"
-                  value={formData.phone}
-                  onChangeText={(text) => updateFormData('phone', text)}
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="phone"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                />
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.phone}
-                </FormControl.ErrorMessage>
-              </FormControl>
-
-              {/* Gender */}
-              <FormControl>
-                <FormControl.Label>Cinsiyet (Opsiyonel)</FormControl.Label>
-                <Select
-                  selectedValue={formData.gender}
-                  placeholder="Cinsiyet Seçiniz"
-                  size="lg"
-                  onValueChange={(value) => updateFormData('gender', value)}
-                >
-                  <Select.Item label="Erkek" value="male" />
-                  <Select.Item label="Kadın" value="female" />
-                  <Select.Item label="Diğer" value="other" />
-                  <Select.Item label="Belirtmek İstemiyorum" value="prefer_not_to_say" />
-                </Select>
-              </FormControl>
-
-              {/* Date of Birth */}
-              <FormControl>
-                <FormControl.Label>Doğum Tarihi (Opsiyonel)</FormControl.Label>
-                <Pressable
-                  onPress={() => {}}
-                >
+              <Text fontSize="md" color="rgba(255, 255, 255, 0.8)" textAlign="center" mb={8} lineHeight={6}>
+                Bilgilerinizi girerek hemen hesabınızı oluşturun.
+              </Text>
+              
+              {/* Form Fields */}
+              <VStack space={5} mb={6}>
+                {/* First Name */}
+                <FormControl isInvalid={!!errors.firstName}>
                   <Input
-                    placeholder="Doğum tarihinizi seçin"
-                    size="lg"
-                    value={formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('tr-TR') : ''}
-                    isReadOnly
+                    placeholder="Adınız"
+                    value={formData.firstName}
+                    onChangeText={(text) => updateFormData('firstName', text)}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    bg="rgba(255, 255, 255, 0.15)"
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderRadius={16}
+                    h={14}
+                    fontSize="md"
+                    color="white"
+                    placeholderTextColor="#94a3b8"
+                    _focus={{
+                      borderColor: "white",
+                      bg: "rgba(255, 255, 255, 0.25)"
+                    }}
                     InputLeftElement={
-                      <Icon
-                        as={MaterialIcons}
-                        name="cake"
-                        size={5}
-                        ml={3}
-                        color="gray.400"
-                      />
+                      <Icon as={MaterialIcons} name="person" size={5} color="gray.400" ml={4} />
                     }
                   />
-                </Pressable>
-                {/* Temporarily disabled DateTimePicker due to native module issue */}
-                {/* {showDatePicker && (
-                  <DateTimePicker
-                    value={formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date(2000, 0, 1)}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    maximumDate={new Date()}
-                    minimumDate={new Date(1900, 0, 1)}
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(false);
-                      if (selectedDate) {
-                        updateFormData('dateOfBirth', selectedDate.toISOString().split('T')[0]);
-                      }
+                  <FormControl.ErrorMessage>{errors.firstName}</FormControl.ErrorMessage>
+                </FormControl>
+                
+                {/* Last Name */}
+                <FormControl isInvalid={!!errors.lastName}>
+                  <Input
+                    placeholder="Soyadınız"
+                    value={formData.lastName}
+                    onChangeText={(text) => updateFormData('lastName', text)}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    bg="rgba(255, 255, 255, 0.15)"
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderRadius={16}
+                    h={14}
+                    fontSize="md"
+                    color="white"
+                    placeholderTextColor="#94a3b8"
+                    _focus={{
+                      borderColor: "white",
+                      bg: "rgba(255, 255, 255, 0.25)"
                     }}
+                    InputLeftElement={
+                      <Icon as={MaterialIcons} name="person" size={5} color="gray.400" ml={4} />
+                    }
                   />
-                )} */}
-              </FormControl>
-
-              {/* Password */}
-              <FormControl isRequired isInvalid={!!errors.password}>
-                <FormControl.Label>Şifre</FormControl.Label>
-                <Input
-                  testID="password-input"
-                  placeholder="Şifre"
-                  size="lg"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChangeText={(text) => updateFormData('password', text)}
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="lock"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                  InputRightElement={
-                    <Pressable onPress={() => setShowPassword(!showPassword)}>
-                      <Icon
-                        as={MaterialIcons}
-                        name={showPassword ? 'visibility' : 'visibility-off'}
-                        size={5}
-                        mr={3}
-                        color="gray.400"
-                      />
-                    </Pressable>
-                  }
-                />
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.password}
-                </FormControl.ErrorMessage>
-              </FormControl>
-
-              {/* Confirm Password */}
-              <FormControl isRequired isInvalid={!!errors.confirmPassword}>
-                <FormControl.Label>Şifre Tekrar</FormControl.Label>
-                <Input
-                  testID="confirm-password-input"
-                  placeholder="Şifre Tekrar"
-                  size="lg"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChangeText={(text) => updateFormData('confirmPassword', text)}
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="lock"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                  InputRightElement={
-                    <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                      <Icon
-                        as={MaterialIcons}
-                        name={showConfirmPassword ? 'visibility' : 'visibility-off'}
-                        size={5}
-                        mr={3}
-                        color="gray.400"
-                      />
-                    </Pressable>
-                  }
-                />
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.confirmPassword}
-                </FormControl.ErrorMessage>
-              </FormControl>
-
-              {/* Terms and Conditions */}
-              <FormControl isRequired isInvalid={!!errors.acceptTerms}>
-                <VStack space={2}>
-                  <Checkbox
-                    value="terms"
-                    isChecked={formData.acceptTerms}
-                    onChange={(isChecked) => updateFormData('acceptTerms', isChecked)}
-                    colorScheme="primary"
-                    testID="terms-checkbox"
-                  >
-                    <Text fontSize="sm" color="gray.700">
-                      <Link _text={{ color: 'primary.600' }}>Kullanım Koşulları</Link> ve&nbsp;
-                      <Link _text={{ color: 'primary.600' }}>Gizlilik Politikası</Link>&apos;nı kabul ediyorum
-                    </Text>
-                  </Checkbox>
-                  <Checkbox
-                    value="marketing"
-                    isChecked={formData.acceptMarketing}
-                    onChange={(isChecked) => updateFormData('acceptMarketing', isChecked)}
-                    colorScheme="primary"
-                  >
-                    <Text fontSize="sm" color="gray.700">
-                      Pazarlama e-postalarını almayı kabul ediyorum
-                    </Text>
-                  </Checkbox>
-                </VStack>
-                <FormControl.ErrorMessage leftIcon={<WarningOutlineIcon size="xs" />}>
-                  {errors.acceptTerms}
-                </FormControl.ErrorMessage>
-              </FormControl>
-            </VStack>
-
-            {/* Register Button */}
-            <Button
-              size="lg"
-              colorScheme="primary"
-              onPress={handleRegister}
-              isLoading={loading}
-              isLoadingText="Kayıt oluşturuluyor..."
-              mt={4}
-            >
-              Hesap Oluştur
-            </Button>
-
-            {/* Social Register */}
-            <VStack space={3} mt={4}>
-              <HStack alignItems="center" space={2}>
-                <Box flex={1} h={0.5} bg="gray.300" />
-                <Text fontSize="sm" color="gray.500">
-                  veya
-                </Text>
-                <Box flex={1} h={0.5} bg="gray.300" />
-              </HStack>
-
-              <HStack space={3}>
-                <Button
-                  flex={1}
-                  variant="outline"
-                  colorScheme="gray"
-                  leftIcon={
-                    <Icon as={MaterialIcons} name="g-mobiledata" size={6} />
-                  }
-                  onPress={handleGoogleSignUp}
-                  isLoading={googleLoading}
-                  isLoadingText="Google..."
-                >
-                  Google
-                </Button>
-                <Button
-                  flex={1}
-                  variant="outline"
-                  colorScheme="gray"
-                  leftIcon={
-                    <Icon as={MaterialIcons} name="apple" size={5} />
-                  }
-                  onPress={handleAppleSignUp}
-                  isLoading={appleLoading}
-                  isLoadingText="Apple..."
-                >
-                  Apple
-                </Button>
-              </HStack>
-            </VStack>
-
-            {/* Login Link */}
-            <HStack justifyContent="center" mt={4}>
-              <Text fontSize="sm" color="gray.600">
-                Zaten hesabınız var mı?&nbsp;
-              </Text>
-              <Link
-                _text={{
-                  color: 'primary.600',
-                  fontWeight: 'medium',
-                  fontSize: 'sm',
-                }}
-                onPress={() => navigation.navigate('Login')}
+                  <FormControl.ErrorMessage>{errors.lastName}</FormControl.ErrorMessage>
+                </FormControl>
+                
+                {/* Email */}
+                <FormControl isInvalid={!!errors.email}>
+                  <Input
+                    placeholder="E-posta adresiniz"
+                    value={formData.email}
+                    onChangeText={(text) => updateFormData('email', text)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    bg="rgba(255, 255, 255, 0.15)"
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderRadius={16}
+                    h={14}
+                    fontSize="md"
+                    color="white"
+                    placeholderTextColor="#94a3b8"
+                    _focus={{
+                      borderColor: "white",
+                      bg: "rgba(255, 255, 255, 0.25)"
+                    }}
+                    InputLeftElement={
+                      <Icon as={MaterialIcons} name="email" size={5} color="gray.400" ml={4} />
+                    }
+                  />
+                  <FormControl.ErrorMessage>{errors.email}</FormControl.ErrorMessage>
+                </FormControl>
+                
+                {/* Phone Number */}
+                <FormControl isInvalid={!!errors.phoneNumber}>
+                  <Input
+                    placeholder="Telefon numaranız"
+                    value={formData.phoneNumber}
+                    onChangeText={(text) => updateFormData('phoneNumber', text)}
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    bg="rgba(255, 255, 255, 0.15)"
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderRadius={16}
+                    h={14}
+                    fontSize="md"
+                    color="white"
+                    placeholderTextColor="#94a3b8"
+                    _focus={{
+                      borderColor: "white",
+                      bg: "rgba(255, 255, 255, 0.25)"
+                    }}
+                    InputLeftElement={
+                      <Icon as={MaterialIcons} name="phone" size={5} color="gray.400" ml={4} />
+                    }
+                  />
+                  <FormControl.ErrorMessage>{errors.phoneNumber}</FormControl.ErrorMessage>
+                </FormControl>
+                
+                {/* Password */}
+                <FormControl isInvalid={!!errors.password}>
+                  <Input
+                    placeholder="Şifreniz"
+                    value={formData.password}
+                    onChangeText={(text) => updateFormData('password', text)}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    bg="rgba(255, 255, 255, 0.15)"
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderRadius={16}
+                    h={14}
+                    fontSize="md"
+                    color="white"
+                    placeholderTextColor="#94a3b8"
+                    _focus={{
+                      borderColor: "white",
+                      bg: "rgba(255, 255, 255, 0.25)"
+                    }}
+                    InputLeftElement={
+                      <Icon as={MaterialIcons} name="lock" size={5} color="gray.400" ml={4} />
+                    }
+                    InputRightElement={
+                      <Pressable onPress={() => setShowPassword(!showPassword)} p={2} mr={2}>
+                        <Icon
+                          as={MaterialIcons}
+                          name={showPassword ? 'visibility-off' : 'visibility'}
+                          size={5}
+                          color="gray.400"
+                        />
+                      </Pressable>
+                    }
+                  />
+                  <FormControl.ErrorMessage>{errors.password}</FormControl.ErrorMessage>
+                </FormControl>
+                
+                {/* Confirm Password */}
+                <FormControl isInvalid={!!errors.confirmPassword}>
+                  <Input
+                    placeholder="Şifre tekrarı"
+                    value={formData.confirmPassword}
+                    onChangeText={(text) => updateFormData('confirmPassword', text)}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    bg="rgba(255, 255, 255, 0.15)"
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderRadius={16}
+                    h={14}
+                    fontSize="md"
+                    color="white"
+                    placeholderTextColor="#94a3b8"
+                    _focus={{
+                      borderColor: "white",
+                      bg: "rgba(255, 255, 255, 0.25)"
+                    }}
+                    InputLeftElement={
+                      <Icon as={MaterialIcons} name="lock" size={5} color="gray.400" ml={4} />
+                    }
+                    InputRightElement={
+                      <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)} p={2} mr={2}>
+                        <Icon
+                          as={MaterialIcons}
+                          name={showConfirmPassword ? 'visibility-off' : 'visibility'}
+                          size={5}
+                          color="gray.400"
+                        />
+                      </Pressable>
+                    }
+                  />
+                  <FormControl.ErrorMessage>{errors.confirmPassword}</FormControl.ErrorMessage>
+                </FormControl>
+              </VStack>
+              
+              {/* Register Button */}
+              <Button
+                onPress={handleRegister}
+                isDisabled={loading}
+                isLoading={loading}
+                isLoadingText="Creating Account..."
+                borderRadius={16}
+                h={14}
+                mt={2}
+                mb={4}
+                bg="white"
+                _pressed={{ bg: "gray.100" }}
+                leftIcon={
+                  !loading ? <Icon as={MaterialIcons} name="person-add" size={5} color="blue.500" /> : undefined
+                }
               >
-                Giriş Yap
-              </Link>
-            </HStack>
-          </VStack>
+                <Text fontSize="md" fontWeight="600" color="blue.500">
+                  {loading ? 'Hesap Oluşturuluyor...' : 'Hesap Oluştur'}
+                </Text>
+              </Button>
+              
+              {/* Login Link */}
+              <Pressable
+                alignItems="center"
+                mt={2}
+                onPress={() => navigation.navigate('Login' as any)}
+              >
+                <Text fontSize="sm" color="rgba(255, 255, 255, 0.8)">
+                  Zaten hesabınız var mı?{' '}
+                  <Text color="white" fontWeight="600">
+                    Giriş Yapın
+                  </Text>
+                </Text>
+              </Pressable>
+            </Box>
+          </Animated.View>
         </Box>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
+
+
+
+export default RegisterScreen;

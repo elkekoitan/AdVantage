@@ -3,11 +3,16 @@ import PropTypes from 'prop-types';
 import { Box, IBoxProps, VStack, HStack, Heading, Text, Pressable } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 
+// AdVantage Design System 2025 - Modern Card Component
 interface CardProps extends IBoxProps {
   children: React.ReactNode;
-  variant?: 'elevated' | 'outline' | 'filled' | 'ghost';
+  variant?: 'elevated' | 'outline' | 'filled' | 'ghost' | 'glass' | 'gradient';
   onPress?: () => void;
   isDisabled?: boolean;
+  rounded?: 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  padding?: number;
+  hapticFeedback?: boolean;
+  hoverEffect?: boolean;
 }
 
 interface CardHeaderProps {
@@ -27,17 +32,45 @@ interface CardFooterProps {
 
 const CardHeader: React.FC<CardHeaderProps> = ({ title, subtitle, rightElement, leftIcon }) => {
   return (
-    <HStack justifyContent="space-between" alignItems="center" mb={2}>
-      <HStack alignItems="center" flex={1}>
+    <HStack justifyContent="space-between" alignItems="center" mb={3}>
+      <HStack alignItems="center" flex={1} space={3}>
         {leftIcon && (
-          <MaterialIcons name={leftIcon} size={20} color="#374151" style={{ marginRight: 8 }} />
+          <Box 
+            bg="primary.100" 
+            p={2} 
+            borderRadius="lg"
+            _dark={{
+              bg: 'dark.300',
+            }}
+          >
+            <MaterialIcons 
+              name={leftIcon} 
+              size={20} 
+              color="#0ea5e9" 
+            />
+          </Box>
         )}
         <VStack flex={1}>
-          <Heading size="sm" color="gray.800">
+          <Heading 
+            size="md" 
+            color="gray.900"
+            fontFamily="Inter"
+            fontWeight="700"
+            _dark={{
+              color: 'dark.900',
+            }}
+          >
             {title}
           </Heading>
           {subtitle && (
-            <Text fontSize="xs" color="gray.500">
+            <Text 
+              fontSize="sm" 
+              color="gray.500"
+              fontFamily="Inter"
+              _dark={{
+                color: 'dark.500',
+              }}
+            >
               {subtitle}
             </Text>
           )}
@@ -64,7 +97,17 @@ const Card: React.FC<CardProps> & {
   Header: typeof CardHeader;
   Body: typeof CardBody;
   Footer: typeof CardFooter;
-} = ({ children, variant = 'elevated', onPress, isDisabled = false, ...props }) => {
+} = ({ 
+  children, 
+  variant = 'elevated', 
+  onPress, 
+  isDisabled = false, 
+  rounded = '2xl',
+  padding = 6,
+  hapticFeedback = true,
+  hoverEffect = true,
+  ...props 
+}) => {
   const getCardStyles = () => {
     switch (variant) {
       case 'elevated':
@@ -72,19 +115,32 @@ const Card: React.FC<CardProps> & {
           bg: 'white',
           shadow: 3,
           borderWidth: 0,
+          _dark: {
+            bg: 'dark.100',
+            shadow: 0,
+            borderWidth: 1,
+            borderColor: 'dark.300',
+          },
         };
       case 'outline':
         return {
           bg: 'white',
-          borderWidth: 1,
+          borderWidth: 2,
           borderColor: 'gray.200',
           shadow: 0,
+          _dark: {
+            bg: 'dark.100',
+            borderColor: 'dark.300',
+          },
         };
       case 'filled':
         return {
           bg: 'gray.50',
           borderWidth: 0,
           shadow: 0,
+          _dark: {
+            bg: 'dark.200',
+          },
         };
       case 'ghost':
         return {
@@ -92,11 +148,43 @@ const Card: React.FC<CardProps> & {
           borderWidth: 0,
           shadow: 0,
         };
+      case 'glass':
+        return {
+          bg: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          shadow: 0,
+        };
+      case 'gradient':
+        return {
+          bg: {
+            linearGradient: {
+              colors: ['primary.50', 'secondary.50'],
+              start: [0, 0],
+              end: [1, 1],
+            },
+          },
+          borderWidth: 0,
+          shadow: 2,
+          _dark: {
+            bg: {
+              linearGradient: {
+                colors: ['dark.200', 'dark.300'],
+                start: [0, 0],
+                end: [1, 1],
+              },
+            },
+          },
+        };
       default:
         return {
           bg: 'white',
           shadow: 3,
           borderWidth: 0,
+          _dark: {
+            bg: 'dark.100',
+          },
         };
     }
   };
@@ -105,9 +193,10 @@ const Card: React.FC<CardProps> & {
 
   const CardContent = (
     <Box
-      borderRadius={12}
-      p={4}
+      borderRadius={rounded}
+      p={padding}
       opacity={isDisabled ? 0.6 : 1}
+      // Modern hover and press effects
       {...cardStyles}
       {...props}
     >
@@ -117,7 +206,15 @@ const Card: React.FC<CardProps> & {
 
   if (onPress && !isDisabled) {
     return (
-      <Pressable onPress={onPress} _pressed={{ opacity: 0.8 }}>
+      <Pressable 
+        onPress={onPress} 
+        _pressed={{ 
+          opacity: 0.8,
+        }}
+        _hover={hoverEffect ? {
+          opacity: 0.95,
+        } : {}}
+      >
         {CardContent}
       </Pressable>
     );

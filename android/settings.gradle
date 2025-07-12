@@ -1,3 +1,12 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url 'https://repo.expo.dev/expo/maven' }
+    }
+}
+
 rootProject.name = 'AdVantage'
 
 dependencyResolutionManagement {

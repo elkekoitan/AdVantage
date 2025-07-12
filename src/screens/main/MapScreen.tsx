@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Input,
+  Pressable,
+  ScrollView,
+  Icon,
+  Spinner,
+  useToast,
+} from 'native-base';
 import * as Location from 'expo-location';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,28 +40,7 @@ const colors = {
   info: '#3B82F6',
 };
 
-const typography = {
-  heading: {
-    fontFamily: 'System',
-    fontWeight: '700' as const,
-  },
-  subtitle: {
-    fontFamily: 'System',
-    fontWeight: '600' as const,
-  },
-  body: {
-    fontFamily: 'System',
-    fontWeight: '400' as const,
-  },
-  caption: {
-    fontFamily: 'System',
-    fontWeight: '500' as const,
-  },
-  button: {
-    fontFamily: 'System',
-    fontWeight: '600' as const,
-  },
-};
+
 
 const { height } = Dimensions.get('window');
 
@@ -75,6 +59,7 @@ interface MapScreenProps {
 const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
   const navigation = useNavigation<MapScreenNavigationProp>();
   const mapRef = useRef<MapView>(null);
+  const toast = useToast();
   
   const [region, setRegion] = useState<Region>({
     latitude: 41.0082,
@@ -115,6 +100,10 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
       }
     } catch (error) {
       console.error('Error getting location:', error);
+      toast.show({
+        title: 'Hata',
+        description: 'Konum alınamadı. Lütfen konum izinlerini kontrol edin.',
+      });
     }
   }, []);
 
@@ -144,11 +133,17 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
         }
       } else {
         setPlaces([]);
-        Alert.alert('Sonuç Bulunamadı', 'Arama kriterlerinize uygun sonuç bulunamadı.');
+        toast.show({
+          title: 'Sonuç Bulunamadı',
+          description: 'Arama kriterlerinize uygun sonuç bulunamadı.',
+        });
       }
     } catch (error) {
       console.error('Search error:', error);
-      Alert.alert('Hata', 'Arama sırasında bir hata oluştu.');
+      toast.show({
+        title: 'Hata',
+        description: 'Arama sırasında bir hata oluştu.',
+      });
     } finally {
       setLoading(false);
     }
@@ -252,74 +247,110 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
       } catch (error) {
         console.error('Route error:', error);
         // Fallback to external maps
-        const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedPlace.geometry.coordinates[1]},${selectedPlace.geometry.coordinates[0]}`;
-        Alert.alert(
-          'Yol Tarifi',
-          'Rota hesaplanamadı. Harici harita uygulamasında açmak istiyor musunuz?',
-          [
-            { text: 'İptal', style: 'cancel' },
-            { text: 'Aç', onPress: () => console.log('Open external maps:', url) },
-          ]
-        );
+        toast.show({
+          title: 'Yol Tarifi',
+          description: 'Rota hesaplanamadı. Harici harita uygulamasında açmak istiyor musunuz?',
+        });
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const renderPlaceItem = (place: any) => (
-    <TouchableOpacity
-      key={place.properties.id || place.properties.name}
-      style={styles.placeItem}
+  const renderPlaceItem = (place: any, index: number) => (
+    <Pressable
+      key={index}
+      px={5}
+      py={4}
+      borderBottomWidth={1}
+      borderBottomColor={colors.border}
       onPress={() => handlePlaceSelect(place)}
     >
-      <View style={styles.placeInfo}>
-        <Text style={styles.placeName}>{place.properties.name || place.properties.label || 'İsimsiz Yer'}</Text>
-        <Text style={styles.placeAddress}>{place.properties.label || place.properties.category || 'Adres bilgisi yok'}</Text>
+      <VStack flex={1}>
+        <Text
+          fontSize={16}
+          fontWeight="600"
+          color={colors.text}
+          mb={1}
+        >
+          {place.properties.name || place.properties.label || 'İsimsiz Yer'}
+        </Text>
+        <Text
+          fontSize={14}
+          color={colors.textSecondary}
+          mb={1}
+        >
+          {place.properties.label || place.properties.category || 'Detay bilgisi yok'}
+        </Text>
         {place.properties.category && (
-          <View style={styles.ratingContainer}>
-            <Ionicons name="business" size={14} color={colors.info} />
-            <Text style={styles.ratingText}>{place.properties.category}</Text>
-          </View>
+          <HStack alignItems="center">
+            <Icon as={MaterialIcons} name="business" size={4} color={colors.info} />
+            <Text
+              fontSize={14}
+              color={colors.textSecondary}
+              ml={1}
+            >
+              {place.properties.category}
+            </Text>
+          </HStack>
         )}
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-    </TouchableOpacity>
+      </VStack>
+    </Pressable>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
+      <HStack
+        alignItems="center"
+        px={4}
+        py={3}
+        bg={colors.surface}
+        borderBottomWidth={1}
+        borderBottomColor={colors.border}
+      >
+        <Pressable
+          mr={3}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+          <Icon as={MaterialIcons} name="arrow-back" size={6} color={colors.text} />
+        </Pressable>
         
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Konum ara..."
+        <HStack
+          flex={1}
+          alignItems="center"
+          bg={colors.background}
+          borderRadius={12}
+          px={3}
+          h={11}
+        >
+          <Icon as={MaterialIcons} name="search" size={5} color={colors.textSecondary} mr={2} />
+          <Input
+            flex={1}
+            fontSize={16}
+            color={colors.text}
+            placeholder="Yer ara..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={() => handleSearch()}
             returnKeyType="search"
+            variant="unstyled"
+            _focus={{
+              borderWidth: 0,
+            }}
           />
           {loading && (
-            <ActivityIndicator size="small" color={colors.primary} style={styles.loadingIcon} />
+            <Spinner size="sm" color={colors.primary} ml={2} />
           )}
-        </View>
-      </View>
+        </HStack>
+      </HStack>
 
       {/* Map */}
-      <View style={styles.mapContainer}>
+      <Box flex={1} position="relative">
         <MapView
           ref={mapRef}
-          style={styles.map}
+          style={{ flex: 1 }}
           provider={PROVIDER_GOOGLE}
           region={region}
           onRegionChangeComplete={setRegion}
@@ -366,333 +397,223 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
         </MapView>
 
         {/* My Location Button */}
-        <TouchableOpacity
-          style={styles.myLocationButton}
+        <Pressable
+          position="absolute"
+          bottom={5}
+          right={5}
+          bg={colors.surface}
+          borderRadius={25}
+          w={12}
+          h={12}
+          justifyContent="center"
+          alignItems="center"
+          shadow={5}
           onPress={handleMyLocation}
         >
-          <Ionicons name="locate" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+          <Icon as={MaterialIcons} name="my-location" size={6} color={colors.primary} />
+        </Pressable>
+      </Box>
 
       {/* Places List */}
       {showPlacesList && places.length > 0 && (
-        <View style={styles.placesListContainer}>
-          <View style={styles.placesListHeader}>
-            <Text style={styles.placesListTitle}>
+        <Box
+          position="absolute"
+          bottom={0}
+          left={0}
+          right={0}
+          bg={colors.surface}
+          borderTopLeftRadius={20}
+          borderTopRightRadius={20}
+          maxH={height * 0.5}
+          shadow={5}
+        >
+          <HStack
+            justifyContent="space-between"
+            alignItems="center"
+            px={5}
+            py={4}
+            borderBottomWidth={1}
+            borderBottomColor={colors.border}
+          >
+            <Text
+              fontSize={18}
+              fontWeight="600"
+              color={colors.text}
+            >
               {places.length} sonuç bulundu
             </Text>
-            <TouchableOpacity onPress={() => setShowPlacesList(false)}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.placesList}>
+            <Pressable onPress={() => setShowPlacesList(false)}>
+              <Icon as={MaterialIcons} name="close" size={6} color={colors.textSecondary} />
+            </Pressable>
+          </HStack>
+          <ScrollView flex={1}>
             {places.map(renderPlaceItem)}
           </ScrollView>
-        </View>
+        </Box>
       )}
 
       {/* Selected Place Details */}
       {selectedPlace && !showPlacesList && (
-        <View style={styles.selectedPlaceContainer}>
-          <View style={styles.selectedPlaceHeader}>
-            <View style={styles.selectedPlaceInfo}>
-              <Text style={styles.selectedPlaceName}>{selectedPlace.properties.name || selectedPlace.properties.label || 'İsimsiz Yer'}</Text>
-              <Text style={styles.selectedPlaceAddress}>
+        <Box
+          position="absolute"
+          bottom={5}
+          left={5}
+          right={5}
+          bg={colors.surface}
+          borderRadius={16}
+          p={5}
+          shadow={5}
+        >
+          <HStack
+            justifyContent="space-between"
+            alignItems="flex-start"
+            mb={4}
+          >
+            <VStack flex={1} mr={3}>
+              <Text
+                fontSize={18}
+                fontWeight="600"
+                color={colors.text}
+                mb={1}
+              >
+                {selectedPlace.properties.name || selectedPlace.properties.label || 'İsimsiz Yer'}
+              </Text>
+              <Text
+                fontSize={14}
+                color={colors.textSecondary}
+                mb={2}
+              >
                 {selectedPlace.properties.label || selectedPlace.properties.category || 'Detay bilgisi yok'}
               </Text>
               {selectedPlace.properties.category && (
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="business" size={16} color={colors.info} />
-                  <Text style={styles.ratingText}>{selectedPlace.properties.category}</Text>
-                </View>
+                <HStack alignItems="center">
+                  <Icon as={MaterialIcons} name="business" size={4} color={colors.info} />
+                  <Text
+                    fontSize={14}
+                    color={colors.textSecondary}
+                    ml={1}
+                  >
+                    {selectedPlace.properties.category}
+                  </Text>
+                </HStack>
               )}
-            </View>
-            <TouchableOpacity onPress={() => setSelectedPlace(null)}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+            </VStack>
+            <Pressable onPress={() => setSelectedPlace(null)}>
+              <Icon as={MaterialIcons} name="close" size={6} color={colors.textSecondary} />
+            </Pressable>
+          </HStack>
           
           {/* Route Info */}
           {showRoute && routeInfo && (
-            <View style={styles.routeInfoContainer}>
-              <View style={styles.routeInfo}>
-                <View style={styles.routeInfoItem}>
-                  <Ionicons name="time" size={16} color={colors.textSecondary} />
-                  <Text style={styles.routeInfoText}>{routeInfo.duration}</Text>
-                </View>
-                <View style={styles.routeInfoItem}>
-                  <Ionicons name="location" size={16} color={colors.textSecondary} />
-                  <Text style={styles.routeInfoText}>{routeInfo.distance}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.clearRouteButton}
+            <HStack
+              justifyContent="space-between"
+              alignItems="center"
+              bg={colors.primaryLight}
+              borderRadius={12}
+              p={3}
+              mb={4}
+            >
+              <HStack alignItems="center">
+                <HStack alignItems="center" mr={4}>
+                  <Icon as={MaterialIcons} name="access-time" size={4} color={colors.textSecondary} />
+                  <Text
+                    fontSize={14}
+                    fontWeight="600"
+                    color={colors.primary}
+                    ml={1}
+                  >
+                    {routeInfo.duration}
+                  </Text>
+                </HStack>
+                <HStack alignItems="center">
+                  <Icon as={MaterialIcons} name="location-on" size={4} color={colors.textSecondary} />
+                  <Text
+                    fontSize={14}
+                    fontWeight="600"
+                    color={colors.primary}
+                    ml={1}
+                  >
+                    {routeInfo.distance}
+                  </Text>
+                </HStack>
+              </HStack>
+              <Pressable
+                p={1}
                 onPress={() => {
                   setShowRoute(false);
                   setRouteCoordinates([]);
                   setRouteInfo(null);
                 }}
               >
-                <Ionicons name="close" size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+                <Icon as={MaterialIcons} name="close" size={4} color={colors.textSecondary} />
+              </Pressable>
+            </HStack>
           )}
           
-          <View style={styles.selectedPlaceActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, showRoute && styles.actionButtonActive]}
+          <HStack justifyContent="space-around">
+            <Pressable
+              flexDirection="row"
+              alignItems="center"
+              px={5}
+              py={3}
+              bg={showRoute ? colors.primary : colors.primaryLight}
+              borderRadius={12}
+              flex={1}
+              mx={1}
+              justifyContent="center"
               onPress={handleGetDirections}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
+                <Spinner size="sm" color={colors.primary} />
               ) : (
-                <Ionicons name="navigate" size={20} color={colors.primary} />
+                <Icon as={MaterialIcons} name="navigation" size={5} color={colors.primary} />
               )}
-              <Text style={styles.actionButtonText}>
+              <Text
+                fontSize={14}
+                fontWeight="600"
+                color={colors.primary}
+                ml={2}
+              >
                 {showRoute ? 'Rota Gösteriliyor' : 'Yol Tarifi'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
-              style={styles.actionButton}
+            <Pressable
+              flexDirection="row"
+              alignItems="center"
+              px={5}
+              py={3}
+              bg={colors.primaryLight}
+              borderRadius={12}
+              flex={1}
+              mx={1}
+              justifyContent="center"
               onPress={() => {
                 // Add to program or save location
-                Alert.alert('Bilgi', 'Bu özellik yakında eklenecek.');
+                toast.show({
+                  title: 'Bilgi',
+                  description: 'Bu özellik yakında eklenecek.',
+                });
               }}
             >
-              <Ionicons name="bookmark" size={20} color={colors.primary} />
-              <Text style={styles.actionButtonText}>Kaydet</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+              <Icon as={MaterialIcons} name="bookmark" size={5} color={colors.primary} />
+              <Text
+                fontSize={14}
+                fontWeight="600"
+                color={colors.primary}
+                ml={2}
+              >
+                Kaydet
+              </Text>
+            </Pressable>
+          </HStack>
+         </Box>
+       )}
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    marginRight: 12,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text,
-    ...typography.body,
-  },
-  loadingIcon: {
-    marginLeft: 8,
-  },
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  map: {
-    flex: 1,
-  },
-  myLocationButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: colors.surface,
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  placesListContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  placesListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  placesListTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  placesList: {
-    flex: 1,
-  },
-  placeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  placeInfo: {
-    flex: 1,
-  },
-  placeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  placeAddress: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 4,
-    ...typography.body,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginLeft: 4,
-    ...typography.body,
-  },
-  selectedPlaceContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  selectedPlaceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  selectedPlaceInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  selectedPlaceName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  selectedPlaceAddress: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 8,
-    ...typography.body,
-  },
-  selectedPlaceActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    flex: 1,
-    marginHorizontal: 4,
-    justifyContent: 'center',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    marginLeft: 8,
-  },
-  actionButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  routeInfoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  routeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  routeInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  routeInfoText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    marginLeft: 4,
-  },
-  clearRouteButton: {
-    padding: 4,
-  },
-});
+
 
 export default MapScreen;

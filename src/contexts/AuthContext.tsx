@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
+import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 interface SignUpMetadata {
   fullName?: string;
@@ -17,10 +17,11 @@ export interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<void>;
+  register: (email: string, password: string, metadata?: SignUpMetadata) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ provider: string; url: string } | undefined>;
+  signInWithApple: () => Promise<{ provider: string; url: string } | undefined>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,14 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -151,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     signIn,
     signUp,
+    register: signUp, // Alias for signUp
     signOut,
     resetPassword,
     signInWithGoogle,

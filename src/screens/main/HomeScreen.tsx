@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Box,
   ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+  VStack,
+  HStack,
+  Text,
+  Heading,
+  Avatar,
+  IconButton,
+  useColorModeValue,
+  Spinner,
+  Center,
+  Pressable,
+  useTheme,
+  Fab,
+  Badge,
+  Button,
+  Icon,
+} from 'native-base';
+import { RefreshControl, Alert } from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,22 +27,11 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
 import type { MainStackParamList, MainTabParamList } from '../../navigation/MainNavigator';
-
-// Design system
-const colors = {
-  primary: '#007AFF',
-  primaryLight: '#E3F2FD',
-  secondary: '#FF6B35',
-  background: '#F8F9FA',
-  surface: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#6B7280',
-  border: '#E5E7EB',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  info: '#17A2B8',
-};
+import { Card } from '../../components/ui/Card';
+import { VoiceAgent } from '../../components/VoiceAgent';
+import { TimelineView } from '../../components/TimelineView';
+import { RecommendationCard } from '../../components/RecommendationCard';
+import { aiAssistantService, DailyTimeline, AIRecommendation } from '../../services/aiAssistantService';
 
 
 
@@ -78,6 +77,7 @@ interface SupabaseProgramData {
 
 export const HomeScreen = () => {
   const { user, signOut } = useAuth();
+  const theme = useTheme();
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -91,80 +91,166 @@ export const HomeScreen = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // AI Assistant states
+  const [showVoiceAgent, setShowVoiceAgent] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [currentTimeline, setCurrentTimeline] = useState<DailyTimeline | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
+  const [hasNewRecommendations, setHasNewRecommendations] = useState(false);
+  const [isGeneratingTimeline, setIsGeneratingTimeline] = useState(false);
+
+  // Theme colors
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+
+  const textColor = useColorModeValue('gray.800', 'white');
+  const mutedColor = useColorModeValue('gray.600', 'gray.400');
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch user programs
-        const { data: programsData, error: programsError } = await supabase
-          .from('programs')
-          .select(`
-            id,
-            title,
-            date,
-            status,
-            total_budget,
-            spent_amount,
-            program_activities(count)
-          `)
-          .eq('user_id', user?.id)
-          .order('date', { ascending: false })
-          .limit(5);
-  
-        if (programsError) throw programsError;
-  
-        // Transform programs data
-        const transformedPrograms = (programsData as SupabaseProgramData[])?.map((program) => ({
-          ...program,
-          activities_count: program.program_activities?.length || 0,
-        })) || [];
-  
-        setPrograms(transformedPrograms);
-  
-        // Fetch recommendations
-        const { data: recommendationsData, error: recommendationsError } = await supabase
-          .from('recommendations')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('score', { ascending: false })
-          .limit(6);
-  
-        if (recommendationsError) throw recommendationsError;
-        setRecommendations(recommendationsData || []);
-  
-        // Calculate user stats
-        const totalPrograms = programsData?.length || 0;
-        const completedPrograms = (programsData as SupabaseProgramData[])?.filter((p) => p.status === 'completed').length || 0;
-        const totalSavings = (programsData as SupabaseProgramData[])?.reduce((sum: number, p) => sum + (p.total_budget - p.spent_amount), 0) || 0;
-  
-        setUserStats({
-          total_programs: totalPrograms,
-          completed_programs: completedPrograms,
-          total_savings: totalSavings,
-          referral_earnings: 0, // This would come from transactions table
-          current_streak: 5, // This would be calculated based on consecutive days
-        });
-  
-      } catch (error: unknown) {
-        let errorMessage = 'Veriler yüklenirken bir hata oluştu.';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        }
-        Alert.alert('Hata', errorMessage);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    };
-    fetchUserData();
+    if (user?.id) {
+      fetchUserData();
+    }
   }, [user?.id]);
 
+  useEffect(() => {
+    // Generate initial timeline on app start
+    if (user?.id && !currentTimeline) {
+      handleGenerateTimeline();
+    }
+  }, [user?.id, currentTimeline]);
+
   const onRefresh = () => {
-    // Burada refresh işlemi yapılabilir
+    setRefreshing(true);
+    fetchUserData();
+  };
+
+  // AI Assistant Functions
+  const handleGenerateTimeline = async () => {
+    try {
+      setIsGeneratingTimeline(true);
+      const timeline = await aiAssistantService.generateDailyTimeline(
+        user?.id || '',
+        {
+          wakeUpTime: '07:00',
+          sleepTime: '23:00',
+          budgetRange: { min: 100, max: 500 },
+          interests: ['food', 'shopping'],
+          dietaryRestrictions: [],
+          fitnessLevel: 'intermediate' as const,
+          socialPreference: 'extrovert' as const,
+          preferredActivities: ['yürüyüş', 'müze gezisi', 'restoran'],
+          location: {
+            city: 'İstanbul',
+            latitude: 41.0082,
+            longitude: 28.9784
+          }
+        },
+        'neutral'
+      );
+      setCurrentTimeline(timeline);
+      setShowTimeline(true);
+    } catch (error) {
+      Alert.alert('Hata', 'Timeline oluşturulurken bir hata oluştu.');
+    } finally {
+      setIsGeneratingTimeline(false);
+    }
+  };
+
+  const handleGetRecommendations = async () => {
+    try {
+      const recs = await aiAssistantService.generateRecommendations(
+        user?.id || '',
+        'genel',
+        'neutral'
+      );
+      setAiRecommendations(recs);
+      setHasNewRecommendations(true);
+    } catch (error) {
+      Alert.alert('Hata', 'Öneriler alınırken bir hata oluştu.');
+    }
+  };
+
+  const handleAcceptRecommendation = (recommendation: AIRecommendation) => {
+    Alert.alert(
+      'Öneri Kabul Edildi',
+      `${recommendation.title} öneriniz kabul edildi ve programınıza eklendi.`,
+      [{ text: 'Tamam' }]
+    );
+  };
+
+  const handleDismissRecommendation = (recommendation: AIRecommendation) => {
+    setAiRecommendations(prev => prev.filter(r => r.id !== recommendation.id));
+  };
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch user programs
+      const { data: programsData, error: programsError } = await supabase
+        .from('programs')
+        .select(`
+          id,
+          title,
+          date,
+          status,
+          total_budget,
+          spent_amount,
+          program_activities(count)
+        `)
+        .eq('user_id', user?.id)
+        .order('date', { ascending: false })
+        .limit(5);
+
+      if (programsError) throw programsError;
+
+      // Transform programs data
+      const transformedPrograms = (programsData as SupabaseProgramData[])?.map((program) => ({
+        ...program,
+        activities_count: program.program_activities?.length || 0,
+      })) || [];
+
+      setPrograms(transformedPrograms);
+
+      // Fetch recommendations
+      const { data: recommendationsData, error: recommendationsError } = await supabase
+        .from('recommendations')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('score', { ascending: false })
+        .limit(6);
+
+      if (recommendationsError) throw recommendationsError;
+      setRecommendations(recommendationsData || []);
+
+      // Calculate user stats
+      const totalPrograms = programsData?.length || 0;
+      const completedPrograms = (programsData as SupabaseProgramData[])?.filter((p) => p.status === 'completed').length || 0;
+      const totalSavings = (programsData as SupabaseProgramData[])?.reduce((sum: number, p) => sum + (p.total_budget - p.spent_amount), 0) || 0;
+
+      setUserStats({
+        total_programs: totalPrograms,
+        completed_programs: completedPrograms,
+        total_savings: totalSavings,
+        referral_earnings: 0, // This would come from transactions table
+        current_streak: 5, // This would be calculated based on consecutive days
+      });
+
+      // Load AI recommendations on startup
+      await handleGetRecommendations();
+
+    } catch (error: unknown) {
+      let errorMessage = 'Veriler yüklenirken bir hata oluştu.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      Alert.alert('Hata', errorMessage);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -196,658 +282,604 @@ export const HomeScreen = () => {
   const getRecommendationIcon = (type: string) => {
     switch (type) {
       case 'restaurant':
-        return 'restaurant-outline' as const;
+        return 'restaurant' as const;
       case 'activity':
-        return 'fitness-outline' as const;
+        return 'fitness-center' as const;
       case 'product':
-        return 'bag-outline' as const;
+        return 'shopping-bag' as const;
       case 'event':
-        return 'calendar-outline' as const;
+        return 'calendar-today' as const;
       default:
-        return 'star-outline' as const;
+        return 'star' as const;
     }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Yükleniyor...</Text>
-        </View>
-      </SafeAreaView>
+      <Box flex={1} bg={bgColor}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <Center flex={1}>
+            <VStack space={4} alignItems="center">
+              <Spinner size="lg" color="primary.500" />
+              <Text color={textColor} fontSize="md">Yükleniyor...</Text>
+            </VStack>
+          </Center>
+        </SafeAreaView>
+      </Box>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.userInfo}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
+    <Box flex={1} bg={bgColor}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView
+          flex={1}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Header */}
+          <Box px={6} pt={4} pb={2}>
+            <HStack justifyContent="space-between" alignItems="center">
+              <HStack space={3} alignItems="center">
+                <Avatar
+                  size="md"
+                  bg="primary.500"
+                  _text={{ color: 'white', fontWeight: 'bold' }}
+                >
                   {user?.user_metadata?.full_name?.charAt(0) || 'U'}
-                </Text>
-              </View>
-              <View style={styles.userDetails}>
-                <Text style={styles.welcomeText}>
-                  Merhaba, {user?.user_metadata?.full_name || 'Kullanıcı'}!
-                </Text>
-                <Text style={styles.subtitleText}>
-                  Bugün hangi deneyimi yaşamak istiyorsunuz?
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-              <Ionicons name="log-out-outline" size={24} color={colors.surface} />
-            </TouchableOpacity>
-          </View>
-        </View>
+                </Avatar>
+                <VStack>
+                  <Text color={mutedColor} fontSize="sm">Merhaba,</Text>
+                  <Heading size="md" color={textColor}>
+                    {user?.user_metadata?.full_name || 'Kullanıcı'}
+                  </Heading>
+                  <Text color={mutedColor} fontSize="xs">
+                    Bugün hangi deneyimi yaşamak istiyorsunuz?
+                  </Text>
+                </VStack>
+              </HStack>
+              <IconButton
+                icon={<MaterialIcons name="logout" size={24} />}
+                onPress={signOut}
+                variant="ghost"
+                rounded="full"
+                colorScheme="primary"
+              />
+            </HStack>
+          </Box>
 
-        <View style={styles.content}>
           {/* Quick Actions */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.sectionTitle}>
-                Hızlı İşlemler
-              </Text>
-              <View style={styles.quickActionsGrid}>
-                <TouchableOpacity
+          <Box px={6} py={4}>
+            <Heading size="md" color={textColor} mb={4}>Hızlı İşlemler</Heading>
+            <VStack space={4}>
+              <HStack space={3} justifyContent="space-between">
+                <Pressable
+                  flex={1}
                   onPress={() => navigation.navigate('CreateProgram', {})}
-                  style={[styles.quickActionButton, { backgroundColor: colors.primary }]}
+                  _pressed={{ opacity: 0.8 }}
                 >
-                  <Ionicons name="add-circle" size={32} color={colors.surface} />
-                  <Text style={styles.quickActionText}>
-                    Yeni Program
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="primary.100" p={3} rounded="full">
+                        <MaterialIcons name="add-circle" size={24} color={theme.colors.primary[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Yeni Program
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
                   onPress={() => navigation.navigate('Explore')}
-                  style={[styles.quickActionButton, { backgroundColor: colors.secondary }]}
+                  _pressed={{ opacity: 0.8 }}
                 >
-                  <Ionicons name="compass" size={32} color={colors.surface} />
-                  <Text style={styles.quickActionText}>
-                    Keşfet
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="secondary.100" p={3} rounded="full">
+                        <MaterialIcons name="explore" size={24} color={theme.colors.secondary[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Keşfet
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
                   onPress={() => navigation.navigate('Program')}
-                  style={[styles.quickActionButton, { backgroundColor: colors.warning }]}
+                  _pressed={{ opacity: 0.8 }}
                 >
-                  <Ionicons name="list" size={32} color={colors.surface} />
-                  <Text style={styles.quickActionText}>
-                    Programlarım
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="warning.100" p={3} rounded="full">
+                        <MaterialIcons name="list" size={24} color={theme.colors.warning[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Programlarım
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
                   onPress={() => navigation.navigate('Profile')}
-                  style={[styles.quickActionButton, { backgroundColor: colors.success }]}
+                  _pressed={{ opacity: 0.8 }}
                 >
-                  <Ionicons name="person" size={32} color={colors.surface} />
-                  <Text style={styles.quickActionText}>
-                    Profil
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="success.100" p={3} rounded="full">
+                        <MaterialIcons name="person" size={24} color={theme.colors.success[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Profil
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+              </HStack>
+              
+              {/* AI Assistant Quick Actions */}
+              <HStack space={3} justifyContent="space-between">
+                <Pressable
+                  flex={1}
+                  onPress={() => setShowVoiceAgent(true)}
+                  _pressed={{ opacity: 0.8 }}
+                >
+                  <Card variant="elevated" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="primary.100" p={3} rounded="full">
+                        <MaterialIcons name="mic" size={24} color={theme.colors.primary[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        AI Asistan
+                      </Text>
+                      {hasNewRecommendations && (
+                        <Badge colorScheme="red" rounded="full" variant="solid" size="sm">
+                          Yeni
+                        </Badge>
+                      )}
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
+                  onPress={handleGenerateTimeline}
+                  _pressed={{ opacity: 0.8 }}
+                  disabled={isGeneratingTimeline}
+                >
+                  <Card variant="elevated" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="secondary.100" p={3} rounded="full">
+                        {isGeneratingTimeline ? (
+                          <Spinner size="sm" color={theme.colors.secondary[500]} />
+                        ) : (
+                          <MaterialIcons name="calendar-today" size={24} color={theme.colors.secondary[500]} />
+                        )}
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        {isGeneratingTimeline ? 'Hazırlanıyor...' : 'Günlük Plan'}
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
+                  onPress={handleGetRecommendations}
+                  _pressed={{ opacity: 0.8 }}
+                >
+                  <Card variant="elevated" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="warning.100" p={3} rounded="full">
+                        <MaterialIcons name="auto-awesome" size={24} color={theme.colors.warning[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        AI Öneriler
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
+                  onPress={() => setShowTimeline(true)}
+                  _pressed={{ opacity: 0.8 }}
+                  disabled={!currentTimeline}
+                >
+                  <Card variant="elevated" padding={4} opacity={!currentTimeline ? 0.5 : 1}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="success.100" p={3} rounded="full">
+                        <MaterialIcons name="timeline" size={24} color={theme.colors.success[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Timeline
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+              </HStack>
+            </VStack>
+          </Box>
 
           {/* User Stats */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.sectionTitle}>
-                İstatistiklerim
-              </Text>
-              <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <Ionicons name="albums-outline" size={24} color={colors.primary} />
-                  <Text style={[styles.statNumber, { color: colors.primary }]}>
-                    {userStats.total_programs}
-                  </Text>
-                  <Text style={styles.statLabel}>
-                    Toplam Program
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Ionicons name="checkmark-done-outline" size={24} color={colors.success} />
-                  <Text style={[styles.statNumber, { color: colors.success }]}>
-                    {userStats.completed_programs}
-                  </Text>
-                  <Text style={styles.statLabel}>
-                    Tamamlanan
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Ionicons name="wallet-outline" size={24} color={colors.warning} />
-                  <Text style={[styles.statNumber, { color: colors.warning }]}>
-                    ₺{userStats.total_savings.toLocaleString()}
-                  </Text>
-                  <Text style={styles.statLabel}>
-                    Toplam Tasarruf
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Ionicons name="flame-outline" size={24} color={colors.secondary} />
-                  <Text style={[styles.statNumber, { color: colors.secondary }]}>
-                    {userStats.current_streak}
-                  </Text>
-                  <Text style={styles.statLabel}>
-                    Günlük Seri
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          <Box px={6} py={4}>
+            <Heading size="md" color={textColor} mb={4}>İstatistiklerim</Heading>
+            <HStack space={4} justifyContent="space-between">
+              <Card variant="elevated" flex={1} padding={4}>
+                <VStack space={2} alignItems="center">
+                  <Box bg="primary.100" p={2} rounded="full">
+                    <MaterialIcons name="folder" size={20} color={theme.colors.primary[500]} />
+                  </Box>
+                  <Heading size="lg" color="primary.500">{userStats.total_programs}</Heading>
+                  <Text fontSize="xs" color={mutedColor} textAlign="center">Toplam Program</Text>
+                </VStack>
+              </Card>
+              <Card variant="elevated" flex={1} padding={4}>
+                <VStack space={2} alignItems="center">
+                  <Box bg="success.100" p={2} rounded="full">
+                    <MaterialIcons name="check-circle" size={20} color={theme.colors.success[500]} />
+                  </Box>
+                  <Heading size="lg" color="success.500">{userStats.completed_programs}</Heading>
+                  <Text fontSize="xs" color={mutedColor} textAlign="center">Tamamlanan</Text>
+                </VStack>
+              </Card>
+              <Card variant="elevated" flex={1} padding={4}>
+                <VStack space={2} alignItems="center">
+                  <Box bg="warning.100" p={2} rounded="full">
+                    <MaterialIcons name="savings" size={20} color={theme.colors.warning[500]} />
+                  </Box>
+                  <Heading size="lg" color="warning.500">₺{userStats.total_savings.toLocaleString()}</Heading>
+                  <Text fontSize="xs" color={mutedColor} textAlign="center">Toplam Tasarruf</Text>
+                </VStack>
+              </Card>
+              <Card variant="elevated" flex={1} padding={4}>
+                <VStack space={2} alignItems="center">
+                  <Box bg="secondary.100" p={2} rounded="full">
+                    <MaterialIcons name="local-fire-department" size={20} color={theme.colors.secondary[500]} />
+                  </Box>
+                  <Heading size="lg" color="secondary.500">{userStats.current_streak}</Heading>
+                  <Text fontSize="xs" color={mutedColor} textAlign="center">Günlük Seri</Text>
+                </VStack>
+              </Card>
+            </HStack>
+          </Box>
 
           {/* Recent Programs */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  Son Programlarım
+          <Box px={6} py={4}>
+            <HStack justifyContent="space-between" alignItems="center" mb={4}>
+              <Heading size="md" color={textColor}>Son Programlarım</Heading>
+              <Pressable
+                onPress={() => {
+                  Alert.alert('Yakında', 'Tüm programlar özelliği yakında gelecek!');
+                }}
+              >
+                <Text color="primary.500" fontSize="sm" fontWeight="500">
+                  Tümünü Gör
                 </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.alert('Yakında', 'Tüm programlar özelliği yakında gelecek!');
-                  }}
-                >
-                  <Text style={styles.seeAllText}>
-                    Tümünü Gör
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </Pressable>
+            </HStack>
 
-              {programs.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="document-text-outline" size={48} color={colors.textSecondary} />
-                  <Text style={styles.emptyStateText}>
-                    Henüz program oluşturmadınız
-                  </Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    İlk programınızı oluşturmak için yukarıdaki butonu kullanın
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.programsList}>
-                  {programs.slice(0, 3).map((program) => (
-                    <TouchableOpacity
-                      key={program.id}
-                      onPress={() => {
-                        Alert.alert('Yakında', 'Program detayları özelliği yakında gelecek!');
-                      }}
-                      style={styles.programItem}
-                    >
-                      <View style={styles.programHeader}>
-                        <View style={styles.programInfo}>
-                          <Text style={styles.programTitle}>
-                            {program.title}
-                          </Text>
-                          <Text style={styles.programDate}>
-                            {new Date(program.date).toLocaleDateString('tr-TR')}
-                          </Text>
-                          <View style={styles.programMeta}>
-                            <Text style={styles.programMetaText}>
-                              {program.activities_count} aktivite
+            {programs.length === 0 ? (
+              <Card variant="glass" padding={8}>
+                <VStack space={4} alignItems="center">
+                  <MaterialIcons name="description" size={48} color={theme.colors.gray[400]} />
+                  <VStack space={2} alignItems="center">
+                    <Text fontSize="md" color={textColor} textAlign="center" fontWeight="500">
+                      Henüz program oluşturmadınız
+                    </Text>
+                    <Text fontSize="sm" color={mutedColor} textAlign="center">
+                      İlk programınızı oluşturmak için yukarıdaki butonu kullanın
+                    </Text>
+                  </VStack>
+                </VStack>
+              </Card>
+            ) : (
+              <VStack space={3}>
+                {programs.slice(0, 3).map((program) => (
+                  <Pressable
+                    key={program.id}
+                    onPress={() => {
+                      Alert.alert('Yakında', 'Program detayları özelliği yakında gelecek!');
+                    }}
+                    _pressed={{ opacity: 0.8 }}
+                  >
+                    <Card variant="elevated" padding={4}>
+                      <VStack space={3}>
+                        <HStack justifyContent="space-between" alignItems="flex-start">
+                          <VStack space={1} flex={1}>
+                            <Heading size="sm" color={textColor}>
+                              {program.title}
+                            </Heading>
+                            <Text fontSize="sm" color={mutedColor}>
+                              {new Date(program.date).toLocaleDateString('tr-TR')}
                             </Text>
-                            <Text style={styles.programMetaText}>
-                              •
+                            <HStack space={2} alignItems="center">
+                              <Text fontSize="xs" color={mutedColor}>
+                                {program.activities_count} aktivite
+                              </Text>
+                              <Text fontSize="xs" color={mutedColor}>•</Text>
+                              <Text fontSize="xs" color={mutedColor}>
+                                ₺{program.total_budget?.toLocaleString() || 0} bütçe
+                              </Text>
+                            </HStack>
+                          </VStack>
+                          <Box
+                            bg={`${getStatusColor(program.status)}.500`}
+                            px={3}
+                            py={1}
+                            rounded="md"
+                            ml={3}
+                          >
+                            <Text fontSize="xs" color="white" fontWeight="500">
+                              {getStatusText(program.status)}
                             </Text>
-                            <Text style={styles.programMetaText}>
-                              ₺{program.total_budget?.toLocaleString() || 0} bütçe
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(program.status) }]}>
-                          <Text style={styles.statusText}>
-                            {getStatusText(program.status)}
-                          </Text>
-                        </View>
-                      </View>
-                      {program.total_budget > 0 && (
-                        <View style={styles.progressSection}>
-                          <View style={styles.progressHeader}>
-                            <Text style={styles.progressText}>
-                              Harcanan: ₺{program.spent_amount?.toLocaleString() || 0}
-                            </Text>
-                            <Text style={styles.progressText}>
-                              {Math.round(((program.spent_amount || 0) / program.total_budget) * 100)}%
-                            </Text>
-                          </View>
-                          <View style={styles.progressBar}>
-                            <View 
-                              style={[
-                                styles.progressFill, 
-                                { 
-                                  width: `${Math.min(((program.spent_amount || 0) / program.total_budget) * 100, 100)}%`,
-                                  backgroundColor: colors.primary
-                                }
-                              ]} 
-                            />
-                          </View>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
+                          </Box>
+                        </HStack>
+                        {program.total_budget > 0 && (
+                          <VStack space={2}>
+                            <HStack justifyContent="space-between">
+                              <Text fontSize="xs" color={mutedColor}>
+                                Harcanan: ₺{program.spent_amount?.toLocaleString() || 0}
+                              </Text>
+                              <Text fontSize="xs" color={mutedColor}>
+                                {Math.round(((program.spent_amount || 0) / program.total_budget) * 100)}%
+                              </Text>
+                            </HStack>
+                            <Box bg="gray.200" height={2} rounded="full" overflow="hidden">
+                              <Box
+                                bg="primary.500"
+                                height="100%"
+                                width={`${Math.min(((program.spent_amount || 0) / program.total_budget) * 100, 100)}%`}
+                                rounded="full"
+                              />
+                            </Box>
+                          </VStack>
+                        )}
+                      </VStack>
+                    </Card>
+                  </Pressable>
+                ))}
+              </VStack>
+            )}
+          </Box>
 
           {/* AI Recommendations */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  Size Özel Öneriler
-                </Text>
-                <Ionicons name="sparkles" size={24} color={colors.primary} />
-              </View>
+          <Box px={6} py={4}>
+            <HStack justifyContent="space-between" alignItems="center" mb={4}>
+              <Heading size="md" color={textColor}>Size Özel Öneriler</Heading>
+              <MaterialIcons name="auto-awesome" size={24} color={theme.colors.primary[500]} />
+            </HStack>
 
-              {recommendations.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="bulb-outline" size={48} color={colors.textSecondary} />
-                  <Text style={styles.emptyStateText}>
-                    AI önerileriniz hazırlanıyor...
-                  </Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Daha fazla program oluşturun ve kişiselleştirilmiş öneriler alın
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.recommendationsList}>
-                  {recommendations.slice(0, 3).map((recommendation) => (
-                    <TouchableOpacity
-                      key={recommendation.id}
-                      onPress={() => {
-                        Alert.alert('Yakında', 'Öneri detayları özelliği yakında gelecek!');
-                      }}
-                      style={styles.recommendationItem}
+            {/* AI Recommendations */}
+            {aiRecommendations.length > 0 ? (
+              <VStack space={3}>
+                {aiRecommendations.slice(0, 3).map((recommendation) => (
+                  <RecommendationCard
+                    key={recommendation.id}
+                    recommendation={recommendation}
+                    onAccept={() => handleAcceptRecommendation(recommendation)}
+                    onDismiss={() => handleDismissRecommendation(recommendation)}
+                  />
+                ))}
+                {aiRecommendations.length > 3 && (
+                  <Button
+                    variant="ghost"
+                    onPress={() => {
+                      Alert.alert('Tüm Öneriler', 'Tüm öneriler sayfası yakında gelecek!');
+                    }}
+                  >
+                    <Text color="primary.500">Tüm Önerileri Gör ({aiRecommendations.length})</Text>
+                  </Button>
+                )}
+              </VStack>
+            ) : recommendations.length === 0 ? (
+              <Card variant="glass" padding={8}>
+                <VStack space={4} alignItems="center">
+                  <MaterialIcons name="lightbulb-outline" size={48} color={theme.colors.gray[400]} />
+                  <VStack space={2} alignItems="center">
+                    <Text fontSize="md" color={textColor} textAlign="center" fontWeight="500">
+                      AI önerileriniz hazırlanıyor...
+                    </Text>
+                    <Text fontSize="sm" color={mutedColor} textAlign="center">
+                      Sesli asistanla konuşarak kişiselleştirilmiş öneriler alın
+                    </Text>
+                    <Button
+                      mt={3}
+                      size="sm"
+                      variant="outline"
+                      onPress={() => setShowVoiceAgent(true)}
+                      leftIcon={<Icon as={Ionicons} name="mic" size="sm" />}
                     >
-                      <View style={styles.recommendationContent}>
-                        <Ionicons 
-                          name={getRecommendationIcon(recommendation.type)} 
-                          size={32} 
-                          color={colors.primary} 
-                        />
-                        <View style={styles.recommendationText}>
-                          <Text style={styles.recommendationTitle}>
+                      Sesli Asistanla Konuş
+                    </Button>
+                  </VStack>
+                </VStack>
+              </Card>
+            ) : (
+              <VStack space={3}>
+                {recommendations.slice(0, 3).map((recommendation) => (
+                  <Pressable
+                    key={recommendation.id}
+                    onPress={() => {
+                      Alert.alert('Yakında', 'Öneri detayları özelliği yakında gelecek!');
+                    }}
+                    _pressed={{ opacity: 0.8 }}
+                  >
+                    <Card variant="elevated" padding={4}>
+                      <HStack space={4} alignItems="center">
+                        <Box bg="primary.100" p={3} rounded="full">
+                          <MaterialIcons 
+                            name={getRecommendationIcon(recommendation.type)} 
+                            size={24} 
+                            color={theme.colors.primary[500]} 
+                          />
+                        </Box>
+                        <VStack space={1} flex={1}>
+                          <Text fontSize="md" color={textColor} fontWeight="600">
                             {recommendation.title}
                           </Text>
-                          <Text style={styles.recommendationDescription}>
+                          <Text fontSize="sm" color={mutedColor} numberOfLines={2}>
                             {recommendation.description}
                           </Text>
-                          <Text style={styles.recommendationReason}>
+                          <Text fontSize="xs" color="primary.500" fontWeight="500">
                             {recommendation.reason}
                           </Text>
-                        </View>
-                        <View style={styles.recommendationScore}>
-                          <Text style={styles.scoreLabel}>
+                        </VStack>
+                        <VStack space={1} alignItems="center">
+                          <Text fontSize="xs" color={mutedColor}>
                             Match
                           </Text>
-                          <Text style={styles.scoreValue}>
+                          <Text fontSize="sm" color="primary.500" fontWeight="bold">
                             {Math.round(recommendation.score * 100)}%
                           </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
+                        </VStack>
+                      </HStack>
+                    </Card>
+                  </Pressable>
+                ))}
+              </VStack>
+            )}
+          </Box>
 
           {/* Coming Soon Features */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.sectionTitle}>
-                Yakında Gelecek Özellikler
-              </Text>
-              <View style={styles.featuresList}>
-                <View style={styles.featureItem}>
-                  <Ionicons name="map" size={24} color={colors.info} />
-                  <View style={styles.featureText}>
-                    <Text style={styles.featureTitle}>
+          <Box px={6} py={4} pb={8}>
+            <Heading size="md" color={textColor} mb={4}>Yakında Gelecek Özellikler</Heading>
+            <VStack space={3}>
+              <Card variant="glass" padding={4}>
+                <HStack space={4} alignItems="center">
+                  <Box bg="info.100" p={3} rounded="full">
+                    <MaterialIcons name="map" size={24} color={theme.colors.info[500]} />
+                  </Box>
+                  <VStack space={1} flex={1}>
+                    <Text fontSize="md" color={textColor} fontWeight="600">
                       Harita Entegrasyonu
                     </Text>
-                    <Text style={styles.featureDescription}>
+                    <Text fontSize="sm" color={mutedColor}>
                       Yakındaki mekanları keşfedin
                     </Text>
-                  </View>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.featureItem}>
-                  <Ionicons name="share-social" size={24} color={colors.success} />
-                  <View style={styles.featureText}>
-                    <Text style={styles.featureTitle}>
+                  </VStack>
+                </HStack>
+              </Card>
+              <Card variant="glass" padding={4}>
+                <HStack space={4} alignItems="center">
+                  <Box bg="success.100" p={3} rounded="full">
+                    <MaterialIcons name="share" size={24} color={theme.colors.success[500]} />
+                  </Box>
+                  <VStack space={1} flex={1}>
+                    <Text fontSize="md" color={textColor} fontWeight="600">
                       Sosyal Paylaşım
                     </Text>
-                    <Text style={styles.featureDescription}>
+                    <Text fontSize="sm" color={mutedColor}>
                       Programlarınızı sosyal medyada paylaşın
                     </Text>
-                  </View>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.featureItem}>
-                  <Ionicons name="business" size={24} color={colors.secondary} />
-                  <View style={styles.featureText}>
-                    <Text style={styles.featureTitle}>
+                  </VStack>
+                </HStack>
+              </Card>
+              <Card variant="glass" padding={4}>
+                <HStack space={4} alignItems="center">
+                  <Box bg="secondary.100" p={3} rounded="full">
+                    <MaterialIcons name="business" size={24} color={theme.colors.secondary[500]} />
+                  </Box>
+                  <VStack space={1} flex={1}>
+                    <Text fontSize="md" color={textColor} fontWeight="600">
                       İşletme Paneli
                     </Text>
-                    <Text style={styles.featureDescription}>
+                    <Text fontSize="sm" color={mutedColor}>
                       İşletmenizi kaydedin ve müşterilerinize ulaşın
                     </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+                  </VStack>
+                </HStack>
+              </Card>
+            </VStack>
+          </Box>
+        </ScrollView>
+        
+        {/* AI Voice Assistant FAB */}
+        <Fab
+          renderInPortal={false}
+          shadow={2}
+          size="lg"
+          icon={<Icon color="white" as={Ionicons} name="mic" size="lg" />}
+          onPress={() => setShowVoiceAgent(true)}
+          bg="primary.500"
+          position="absolute"
+          bottom={4}
+          right={4}
+        />
+        
+        {/* Timeline FAB */}
+        <Fab
+          renderInPortal={false}
+          shadow={2}
+          size="md"
+          icon={<Icon color="white" as={Ionicons} name="calendar" size="md" />}
+          onPress={() => setShowTimeline(true)}
+          bg="secondary.500"
+          position="absolute"
+          bottom={20}
+          right={20}
+          isLoading={isGeneratingTimeline}
+        >
+          {hasNewRecommendations && (
+            <Badge
+              colorScheme="red"
+              rounded="full"
+              mb={-1}
+              mr={-1}
+              zIndex={1}
+              variant="solid"
+              alignSelf="flex-end"
+              _text={{
+                fontSize: 12,
+              }}
+            >
+              !
+            </Badge>
+          )}
+        </Fab>
+        
+        {/* Voice Agent Modal */}
+        <VoiceAgent
+          isVisible={showVoiceAgent}
+          onClose={() => setShowVoiceAgent(false)}
+          onTimelineGenerated={(timeline) => {
+            setCurrentTimeline(timeline);
+            setShowTimeline(true);
+          }}
+          onRecommendationsGenerated={(recs: AIRecommendation[]) => {
+            setAiRecommendations(recs);
+            setHasNewRecommendations(true);
+          }}
+        />
+        
+        {/* Timeline Modal */}
+        {currentTimeline && (
+          <TimelineView
+            isVisible={showTimeline}
+            timeline={currentTimeline}
+            onClose={() => setShowTimeline(false)}
+            onActivitySelect={(activity) => {
+              Alert.alert(
+                'Aktivite Seçildi',
+                `${activity.title} aktivitesi seçildi ve programınıza eklendi.`,
+                [{ text: 'Tamam' }]
+              );
+            }}
+          />
+        )}
+        
+      </SafeAreaView>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.surface,
-    marginBottom: 4,
-  },
-  subtitleText: {
-    fontSize: 14,
-    color: colors.surface + '80',
-  },
-  logoutButton: {
-    padding: 8,
-  },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  cardContent: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  quickActionButton: {
-    flex: 1,
-    minWidth: '45%',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.surface,
-    textAlign: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    gap: 8,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary + '80',
-    textAlign: 'center',
-  },
-  programsList: {
-    gap: 12,
-  },
-  programItem: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  programHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  programInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  programTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  programDate: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  programMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  programMetaText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.surface,
-  },
-  progressSection: {
-    marginTop: 12,
-    gap: 4,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  recommendationsList: {
-    gap: 12,
-  },
-  recommendationItem: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  recommendationContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  recommendationText: {
-    flex: 1,
-    gap: 4,
-  },
-  recommendationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  recommendationDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  recommendationReason: {
-    fontSize: 12,
-    color: colors.primary,
-  },
-  recommendationScore: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  scoreLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  scoreValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  featuresList: {
-    gap: 16,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  featureText: {
-    flex: 1,
-    gap: 2,
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  featureDescription: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-});
+// HomeScreen component now uses Native Base components with the new design system
+// All styles are handled through Native Base's theme system
 
 export default HomeScreen;

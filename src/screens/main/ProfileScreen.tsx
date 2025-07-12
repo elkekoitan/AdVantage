@@ -1,20 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
+  RefreshControl,
+} from 'react-native';
+import {
+  Box,
+  VStack,
+  HStack,
   Text,
   ScrollView,
-  TouchableOpacity,
-  TextInput,
+  Pressable,
+  Input,
   Switch,
-  Alert,
-  RefreshControl,
-  SafeAreaView,
-  StyleSheet,
   Modal,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+  Spinner,
+  Icon,
+  useToast,
+  Progress,
+  Avatar,
+  Badge,
+  Divider,
+  Button,
+  FormControl,
+  TextArea,
+  AlertDialog,
+} from 'native-base';
+import { MaterialIcons } from '@expo/vector-icons';
 
 // Colors and Typography
 const colors = {
@@ -71,6 +81,8 @@ interface Achievement {
 
 export const ProfileScreen = () => {
   const { user, signOut } = useAuth();
+  const toast = useToast();
+  const cancelRef = useRef(null);
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
@@ -138,7 +150,10 @@ export const ProfileScreen = () => {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      Alert.alert('Hata', errorMessage);
+      toast.show({
+        title: 'Hata',
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -201,7 +216,10 @@ export const ProfileScreen = () => {
 
   const handleUpdateProfile = async () => {
     if (!editForm.full_name.trim()) {
-      Alert.alert('Eksik Bilgi', 'Ad soyad alanı zorunludur.');
+      toast.show({
+        title: 'Eksik Bilgi',
+        description: 'Ad soyad alanı zorunludur.',
+      });
       return;
     }
 
@@ -209,7 +227,10 @@ export const ProfileScreen = () => {
       setUpdating(true);
 
       // Here we would normally update the profile in Supabase
-      Alert.alert('Başarılı', 'Profil başarıyla güncellendi!');
+      toast.show({
+        title: 'Başarılı',
+        description: 'Profil başarıyla güncellendi!',
+      });
 
       setIsEditModalVisible(false);
       fetchProfile();
@@ -218,7 +239,10 @@ export const ProfileScreen = () => {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      Alert.alert('Hata', errorMessage);
+      toast.show({
+        title: 'Hata',
+        description: errorMessage,
+      });
     } finally {
       setUpdating(false);
     }
@@ -227,922 +251,509 @@ export const ProfileScreen = () => {
   const handleLogout = async () => {
     try {
       await signOut();
-      Alert.alert('Başarılı', 'Başarıyla çıkış yapıldı.');
+      toast.show({
+        title: 'Başarılı',
+        description: 'Başarıyla çıkış yapıldı.',
+      });
     } catch (error: unknown) {
       let errorMessage = 'Çıkış yapılırken bir hata oluştu.';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      Alert.alert('Hata', errorMessage);
+      toast.show({
+        title: 'Hata',
+        description: errorMessage,
+      });
     }
     setIsLogoutModalVisible(false);
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Profil yükleniyor...</Text>
-        </View>
-      </SafeAreaView>
+      <Box flex={1} bg="#f9fafb" justifyContent="center" alignItems="center">
+        <Spinner size="lg" color={colors.primary} />
+        <Text mt={3} fontSize="md" color={colors.textSecondary}>Profil yükleniyor...</Text>
+      </Box>
     );
   }
 
   if (!profile) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Profil yüklenemedi</Text>
-        </View>
-      </SafeAreaView>
+      <Box flex={1} bg="#f9fafb" justifyContent="center" alignItems="center">
+        <Text fontSize="md" color="gray.500">Profil yüklenemedi</Text>
+      </Box>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Box flex={1} bg="#f9fafb">
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.profileInfo}>
-            <View style={styles.profileRow}>
-              <View style={styles.avatarContainer}>
+        <Box p={4}>
+          <Box bg={colors.surface} borderRadius={12} p={5} mb={5}>
+            <HStack alignItems="center" mb={4}>
+              <Box mr={4}>
                 {profile.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+                  <Avatar size="lg" source={{ uri: profile.avatar_url }} />
                 ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>
+                  <Avatar size="lg" bg={colors.primary}>
+                    <Text color="white" fontSize="xl" fontWeight="bold">
                       {profile.full_name.charAt(0).toUpperCase()}
                     </Text>
-                  </View>
+                  </Avatar>
                 )}
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>
+              </Box>
+              <VStack flex={1}>
+                <Text fontSize="lg" fontWeight="600" color={colors.text}>
                   {profile.full_name}
                 </Text>
-                <Text style={styles.userEmail}>
+                <Text fontSize="md" color="gray.500">
                   {profile.email}
                 </Text>
-                <Text style={styles.memberSince}>
+                <Text fontSize="sm" color="gray.500" mt={1}>
                   Üye olma: {new Date(profile.stats.member_since).toLocaleDateString('tr-TR')}
                 </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.editButton}
+              </VStack>
+              <Pressable
+                bg={colors.primary}
+                px={4}
+                py={2}
+                borderRadius={20}
                 onPress={() => setIsEditModalVisible(true)}
               >
-                <Ionicons name="pencil" size={16} color={colors.primary} />
-                <Text style={styles.editButtonText}>Düzenle</Text>
-              </TouchableOpacity>
-            </View>
+                <HStack alignItems="center">
+                  <Icon as={MaterialIcons} name="edit" size={4} color="white" mr={1} />
+                  <Text color="white" fontSize="sm" fontWeight="600">Düzenle</Text>
+                </HStack>
+              </Pressable>
+            </HStack>
             
             {profile.bio && (
-              <Text style={styles.bio}>
+              <Text fontSize="md" color={colors.text} lineHeight={22} mt={2}>
                 {profile.bio}
               </Text>
             )}
             
             {profile.location && (
-              <View style={styles.locationRow}>
-                <Ionicons name="location" size={16} color={colors.textSecondary} />
-                <Text style={styles.locationText}>
+              <HStack alignItems="center" mt={2}>
+                <Icon as={MaterialIcons} name="location-on" size={4} color={colors.textSecondary} mr={1} />
+                <Text fontSize="sm" color="gray.500">
                   {profile.location}
                 </Text>
-              </View>
+              </HStack>
             )}
-          </View>
-        </View>
+          </Box>
+        </Box>
 
         {/* Stats Cards */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>
+        <Box px={4} mb={6}>
+          <Text fontSize="lg" fontWeight="600" color={colors.text} mb={4}>
             İstatistikler
           </Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Ionicons name="document-text" size={32} color={colors.primary} />
-              <Text style={styles.statValue}>
+          <HStack mb={3}>
+            <Box bg="white" borderRadius={12} p={4} alignItems="center" flex={1} mx={1.5} shadow={1}>
+              <Icon as={MaterialIcons} name="description" size={8} color={colors.primary} mb={2} />
+              <Text fontSize="xl" fontWeight="bold" color={colors.primary} mb={1}>
                 {profile.stats.total_programs}
               </Text>
-              <Text style={styles.statLabel}>
+              <Text fontSize="xs" color="gray.500" textAlign="center">
                 Toplam Program
               </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text style={styles.statValue}>
+            </Box>
+            <Box bg="white" borderRadius={12} p={4} alignItems="center" flex={1} mx={1.5} shadow={1}>
+              <Icon as={MaterialIcons} name="check-circle" size={8} color={colors.success} mb={2} />
+              <Text fontSize="xl" fontWeight="bold" color={colors.primary} mb={1}>
                 {profile.stats.completed_programs}
               </Text>
-              <Text style={styles.statLabel}>
+              <Text fontSize="xs" color="gray.500" textAlign="center">
                 Tamamlanan
               </Text>
-            </View>
-          </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Ionicons name="wallet" size={32} color={colors.warning} />
-              <Text style={styles.statValue}>
+            </Box>
+          </HStack>
+          <HStack>
+            <Box bg="white" borderRadius={12} p={4} alignItems="center" flex={1} mx={1.5} shadow={1}>
+              <Icon as={MaterialIcons} name="account-balance-wallet" size={8} color={colors.warning} mb={2} />
+              <Text fontSize="xl" fontWeight="bold" color={colors.primary} mb={1}>
                 ₺{profile.stats.total_savings.toLocaleString()}
               </Text>
-              <Text style={styles.statLabel}>
+              <Text fontSize="xs" color="gray.500" textAlign="center">
                 Toplam Tasarruf
               </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="flame" size={32} color={colors.error} />
-              <Text style={styles.statValue}>
+            </Box>
+            <Box bg="white" borderRadius={12} p={4} alignItems="center" flex={1} mx={1.5} shadow={1}>
+              <Icon as={MaterialIcons} name="local-fire-department" size={8} color={colors.error} mb={2} />
+              <Text fontSize="xl" fontWeight="bold" color={colors.primary} mb={1}>
                 {profile.stats.current_streak}
               </Text>
-              <Text style={styles.statLabel}>
+              <Text fontSize="xs" color="gray.500" textAlign="center">
                 Günlük Seri
               </Text>
-            </View>
-          </View>
-        </View>
+            </Box>
+          </HStack>
+        </Box>
 
         {/* Achievements */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+        <Box px={4} mb={6}>
+          <Text fontSize="lg" fontWeight="600" color={colors.text} mb={4}>
             Başarılar
           </Text>
-          <View style={styles.achievementsContainer}>
+          <VStack space={3}>
             {achievements.map((achievement) => (
-              <View key={achievement.id} style={styles.achievementCard}>
-                <View style={styles.achievementContent}>
-                  <View style={[
-                    styles.achievementIcon,
-                    { backgroundColor: achievement.earned_date ? colors.primary + '20' : '#f5f5f5' }
-                  ]}>
-                    <Ionicons
-                      name={achievement.icon as keyof typeof Ionicons.glyphMap}
-                      size={24}
+              <Box key={achievement.id} bg="white" borderRadius={12} p={4} shadow={1}>
+                <HStack alignItems="center">
+                  <Box
+                    w={12}
+                    h={12}
+                    borderRadius={24}
+                    bg={achievement.earned_date ? colors.primary + '20' : '#f5f5f5'}
+                    justifyContent="center"
+                    alignItems="center"
+                    mr={3}
+                  >
+                    <Icon
+                      as={MaterialIcons}
+                      name={achievement.icon === 'star' ? 'star' : 
+                            achievement.icon === 'savings' ? 'savings' :
+                            achievement.icon === 'trending-up' ? 'trending-up' :
+                            achievement.icon === 'emoji-events' ? 'emoji-events' : 'star'}
+                      size={6}
                       color={achievement.earned_date ? colors.primary : '#9ca3af'}
                     />
-                  </View>
-                  <View style={styles.achievementInfo}>
-                    <Text style={styles.achievementTitle}>
+                  </Box>
+                  <VStack flex={1}>
+                    <Text fontSize="md" fontWeight="600" color={colors.text} mb={1}>
                       {achievement.title}
                     </Text>
-                    <Text style={styles.achievementDescription}>
+                    <Text fontSize="sm" color="gray.500" mb={2}>
                       {achievement.description}
                     </Text>
                     {achievement.earned_date ? (
-                      <Text style={styles.achievementEarned}>
+                      <Text fontSize="xs" color="green.500">
                         Kazanıldı: {new Date(achievement.earned_date).toLocaleDateString('tr-TR')}
                       </Text>
                     ) : achievement.progress && achievement.target ? (
-                      <View style={styles.progressContainer}>
-                        <View style={styles.progressBar}>
-                          <View 
-                            style={[
-                              styles.progressFill,
-                              { width: `${(achievement.progress / achievement.target) * 100}%` }
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.progressText}>
+                      <VStack space={1}>
+                        <Progress
+                          value={(achievement.progress / achievement.target) * 100}
+                          colorScheme="blue"
+                          size="sm"
+                        />
+                        <Text fontSize="xs" color="gray.500">
                           {achievement.progress} / {achievement.target}
                         </Text>
-                      </View>
+                      </VStack>
                     ) : (
-                      <Text style={styles.achievementNotEarned}>
+                      <Text fontSize="xs" color="gray.500">
                         Henüz kazanılmadı
                       </Text>
                     )}
-                  </View>
+                  </VStack>
                   {achievement.earned_date && (
-                    <View style={styles.achievementBadge}>
-                      <Text style={styles.achievementBadgeText}>✓</Text>
-                    </View>
+                    <Badge bg="green.500" borderRadius={12} w={6} h={6} justifyContent="center" alignItems="center">
+                      <Text color="white" fontSize="xs" fontWeight="bold">✓</Text>
+                    </Badge>
                   )}
-                </View>
-              </View>
+                </HStack>
+              </Box>
             ))}
-          </View>
-        </View>
+          </VStack>
+        </Box>
 
         {/* Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+        <Box px={4} mb={6}>
+          <Text fontSize="lg" fontWeight="600" color={colors.text} mb={4}>
             Ayarlar
           </Text>
-          <View style={styles.settingsCard}>
-            <TouchableOpacity
-              style={styles.settingItem}
+          <Box bg="white" borderRadius={12} overflow="hidden" shadow={1}>
+            <Pressable
+              p={4}
               onPress={() => {
-                Alert.alert(
-                  'Yakında',
-                  'Bildirim ayarları yakında gelecek!'
-                );
+                toast.show({
+                  title: 'Yakında',
+                  description: 'Bildirim ayarları yakında gelecek!',
+                });
               }}
             >
-              <View style={styles.settingContent}>
-                <Ionicons name="notifications" size={24} color="#6b7280" />
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="notifications" size={6} color="gray.500" />
+                <VStack flex={1} ml={3}>
+                  <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
                     Bildirimler
                   </Text>
-                  <Text style={styles.settingDescription}>
+                  <Text fontSize="sm" color="gray.500">
                     Push bildirimleri ve e-posta ayarları
                   </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-              </View>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity
-              style={styles.settingItem}
+                </VStack>
+                <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />
+              </HStack>
+            </Pressable>
+            <Divider />
+            <Pressable
+              p={4}
               onPress={() => {
-                Alert.alert(
-                  'Yakında',
-                  'Gizlilik ayarları yakında gelecek!'
-                );
+                toast.show({
+                  title: 'Yakında',
+                  description: 'Gizlilik ayarları yakında gelecek!',
+                });
               }}
             >
-              <View style={styles.settingContent}>
-                <Ionicons name="shield-checkmark" size={24} color="#6b7280" />
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="security" size={6} color="gray.500" />
+                <VStack flex={1} ml={3}>
+                  <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
                     Gizlilik
                   </Text>
-                  <Text style={styles.settingDescription}>
+                  <Text fontSize="sm" color="gray.500">
                     Veri paylaşımı ve gizlilik tercihleri
                   </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-              </View>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity
-              style={styles.settingItem}
+                </VStack>
+                <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />
+              </HStack>
+            </Pressable>
+            <Divider />
+            <Pressable
+              p={4}
               onPress={() => {
-                Alert.alert(
-                  'Yakında',
-                  'Yardım merkezi yakında gelecek!'
-                );
+                toast.show({
+                  title: 'Yakında',
+                  description: 'Yardım merkezi yakında gelecek!',
+                });
               }}
             >
-              <View style={styles.settingContent}>
-                <Ionicons name="help-circle" size={24} color="#6b7280" />
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="help" size={6} color="gray.500" />
+                <VStack flex={1} ml={3}>
+                  <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
                     Yardım
                   </Text>
-                  <Text style={styles.settingDescription}>
+                  <Text fontSize="sm" color="gray.500">
                     SSS, destek ve geri bildirim
                   </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-              </View>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity
-              style={styles.settingItem}
+                </VStack>
+                <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />
+              </HStack>
+            </Pressable>
+            <Divider />
+            <Pressable
+              p={4}
               onPress={() => setIsLogoutModalVisible(true)}
             >
-              <View style={styles.settingContent}>
-                <Ionicons name="log-out" size={24} color="#ef4444" />
-                <Text style={[styles.settingTitle, { color: '#ef4444' }]}>
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="logout" size={6} color="red.500" />
+                <Text fontSize="md" fontWeight="600" color="red.500" ml={3}>
                   Çıkış Yap
                 </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+              </HStack>
+            </Pressable>
+          </Box>
+        </Box>
       </ScrollView>
 
       {/* Edit Profile Modal */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Profili Düzenle</Text>
-            <View style={{ width: 24 }} />
-          </View>
-          
-          <ScrollView style={styles.modalBody}>
-            <View style={styles.formContainer}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Ad Soyad *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="Ad Soyad"
+      <Modal isOpen={isEditModalVisible} onClose={() => setIsEditModalVisible(false)} size="full">
+        <Modal.Content maxWidth="400px" bg="white">
+          <Modal.CloseButton />
+          <Modal.Header>
+            <Text fontSize="lg" fontWeight="600" color={colors.text}>
+              Profili Düzenle
+            </Text>
+          </Modal.Header>
+          <Modal.Body>
+            <VStack space={4}>
+              <FormControl>
+                <FormControl.Label>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
+                    Ad Soyad *
+                  </Text>
+                </FormControl.Label>
+                <Input
                   value={editForm.full_name}
                   onChangeText={(text) => setEditForm({...editForm, full_name: text})}
+                  placeholder="Ad Soyad"
+                  bg="gray.50"
+                  borderColor="gray.200"
+                  _focus={{ borderColor: colors.primary, bg: 'white' }}
                 />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Telefon</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="+90 555 123 45 67"
-                  keyboardType="phone-pad"
+              </FormControl>
+              
+              <FormControl>
+                <FormControl.Label>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
+                    Telefon
+                  </Text>
+                </FormControl.Label>
+                <Input
                   value={editForm.phone}
                   onChangeText={(text) => setEditForm({...editForm, phone: text})}
+                  placeholder="+90 555 123 45 67"
+                  keyboardType="phone-pad"
+                  bg="gray.50"
+                  borderColor="gray.200"
+                  _focus={{ borderColor: colors.primary, bg: 'white' }}
                 />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Konum</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="Şehir, Ülke"
+              </FormControl>
+              
+              <FormControl>
+                <FormControl.Label>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
+                    Konum
+                  </Text>
+                </FormControl.Label>
+                <Input
                   value={editForm.location}
                   onChangeText={(text) => setEditForm({...editForm, location: text})}
+                  placeholder="Şehir, Ülke"
+                  bg="gray.50"
+                  borderColor="gray.200"
+                  _focus={{ borderColor: colors.primary, bg: 'white' }}
                 />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Hakkımda</Text>
-                <TextInput
-                  style={[styles.formInput, styles.textArea]}
-                  placeholder="Kendiniz hakkında kısa bir açıklama..."
+              </FormControl>
+              
+              <FormControl>
+                <FormControl.Label>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
+                    Hakkımda
+                  </Text>
+                </FormControl.Label>
+                <TextArea
                   value={editForm.bio}
                   onChangeText={(text) => setEditForm({...editForm, bio: text})}
-                  multiline
+                  placeholder="Kendiniz hakkında kısa bir açıklama..."
                   numberOfLines={4}
-                  textAlignVertical="top"
+                  bg="gray.50"
+                  borderColor="gray.200"
+                  _focus={{ borderColor: colors.primary, bg: 'white' }}
+                  autoCompleteType="off"
                 />
-              </View>
-
-              <View style={styles.divider} />
+              </FormControl>
               
-              <Text style={styles.sectionTitle}>
+              <Divider my={2} />
+              
+              <Text fontSize="md" fontWeight="600" color={colors.text} mb={3}>
                 Gizlilik Tercihleri
               </Text>
-
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchTitle}>
+              
+              <HStack justifyContent="space-between" alignItems="center" mb={3}>
+                <VStack flex={1}>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
                     Bildirimler
                   </Text>
-                  <Text style={styles.switchDescription}>
+                  <Text fontSize="xs" color="gray.500">
                     Push bildirimleri al
                   </Text>
-                </View>
+                </VStack>
                 <Switch
-                  value={editForm.notifications}
-                  onValueChange={(value) => setEditForm({...editForm, notifications: value})}
-                  trackColor={{ false: '#e5e7eb', true: colors.primary + '40' }}
-                  thumbColor={editForm.notifications ? colors.primary : '#f3f4f6'}
+                  isChecked={editForm.notifications}
+                  onToggle={(value) => setEditForm({...editForm, notifications: value})}
+                  colorScheme="blue"
                 />
-              </View>
-
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchTitle}>
+              </HStack>
+              
+              <HStack justifyContent="space-between" alignItems="center" mb={3}>
+                <VStack flex={1}>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
                     Pazarlama E-postaları
                   </Text>
-                  <Text style={styles.switchDescription}>
+                  <Text fontSize="xs" color="gray.500">
                     Kampanya ve fırsat e-postaları
                   </Text>
-                </View>
+                </VStack>
                 <Switch
-                  value={editForm.marketing_emails}
-                  onValueChange={(value) => setEditForm({...editForm, marketing_emails: value})}
-                  trackColor={{ false: '#e5e7eb', true: colors.primary + '40' }}
-                  thumbColor={editForm.marketing_emails ? colors.primary : '#f3f4f6'}
+                  isChecked={editForm.marketing_emails}
+                  onToggle={(value) => setEditForm({...editForm, marketing_emails: value})}
+                  colorScheme="blue"
                 />
-              </View>
-
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchTitle}>
+              </HStack>
+              
+              <HStack justifyContent="space-between" alignItems="center">
+                <VStack flex={1}>
+                  <Text fontSize="sm" fontWeight="500" color={colors.text}>
                     Konum Takibi
                   </Text>
-                  <Text style={styles.switchDescription}>
+                  <Text fontSize="xs" color="gray.500">
                     Yakındaki fırsatları göster
                   </Text>
-                </View>
+                </VStack>
                 <Switch
-                  value={editForm.location_tracking}
-                  onValueChange={(value) => setEditForm({...editForm, location_tracking: value})}
-                  trackColor={{ false: '#e5e7eb', true: colors.primary + '40' }}
-                  thumbColor={editForm.location_tracking ? colors.primary : '#f3f4f6'}
+                  isChecked={editForm.location_tracking}
+                  onToggle={(value) => setEditForm({...editForm, location_tracking: value})}
+                  colorScheme="blue"
                 />
-              </View>
-            </View>
-          </ScrollView>
+              </HStack>
+            </VStack>
+          </Modal.Body>
           
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => setIsEditModalVisible(false)}
-            >
-              <Text style={styles.cancelButtonText}>İptal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={handleUpdateProfile}
-              disabled={updating}
-            >
-              {updating ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.saveButtonText}>Kaydet</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
+          <Modal.Footer>
+            <Button.Group space={2}>
+              <Button
+                variant="ghost"
+                colorScheme="blueGray"
+                onPress={() => setIsEditModalVisible(false)}
+                flex={1}
+              >
+                İptal
+              </Button>
+              <Button
+                bg={colors.primary}
+                onPress={handleUpdateProfile}
+                isLoading={updating}
+                isLoadingText="Kaydediliyor..."
+                flex={1}
+              >
+                Kaydet
+              </Button>
+            </Button.Group>
+          </Modal.Footer>
+        </Modal.Content>
       </Modal>
 
       {/* Logout Confirmation */}
-      <Modal
-        visible={isLogoutModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsLogoutModalVisible(false)}
+      <AlertDialog
+        isOpen={isLogoutModalVisible}
+        onClose={() => setIsLogoutModalVisible(false)}
+        leastDestructiveRef={cancelRef}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.alertContainer}>
-            <View style={styles.alertHeader}>
-              <Text style={styles.alertTitle}>Çıkış Yap</Text>
-            </View>
-            <View style={styles.alertBody}>
-              <Text style={styles.alertMessage}>
-                Hesabınızdan çıkış yapmak istediğinizden emin misiniz?
-              </Text>
-            </View>
-            <View style={styles.alertFooter}>
-              <TouchableOpacity
-                style={[styles.alertButton, styles.cancelAlertButton]}
+        <AlertDialog.Content>
+          <AlertDialog.CloseButton />
+          <AlertDialog.Header>
+            <Text fontSize="lg" fontWeight="600" color={colors.text}>
+              Çıkış Yap
+            </Text>
+          </AlertDialog.Header>
+          <AlertDialog.Body>
+            <Text fontSize="md" color="gray.600">
+              Hesabınızdan çıkış yapmak istediğinizden emin misiniz?
+            </Text>
+          </AlertDialog.Body>
+          <AlertDialog.Footer>
+            <Button.Group space={2}>
+              <Button
+                variant="ghost"
+                colorScheme="coolGray"
                 onPress={() => setIsLogoutModalVisible(false)}
+                flex={1}
               >
-                <Text style={styles.cancelAlertButtonText}>İptal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.alertButton, styles.dangerButton]}
+                İptal
+              </Button>
+              <Button
+                colorScheme="red"
                 onPress={handleLogout}
+                flex={1}
               >
-                <Text style={styles.dangerButtonText}>Çıkış Yap</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+                Çıkış Yap
+              </Button>
+            </Button.Group>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 12,
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-  editButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statsSection: {
-    marginBottom: 24,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  statCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  achievementsContainer: {
-    gap: 12,
-  },
-  achievementCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  achievementContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  achievementIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  achievementInfo: {
-    flex: 1,
-  },
-  achievementTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  achievementDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 8,
-  },
-  achievementEarned: {
-    fontSize: 12,
-    color: '#10b981',
-  },
-  achievementNotEarned: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  progressContainer: {
-    gap: 4,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  achievementBadge: {
-    backgroundColor: '#10b981',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  achievementBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  settingsCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  settingItem: {
-    padding: 16,
-  },
-  settingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  modalBody: {
-    flex: 1,
-  },
-  formContainer: {
-    padding: 16,
-  },
-  formGroup: {
-    marginBottom: 16,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  formInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: colors.text,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  switchInfo: {
-    flex: 1,
-  },
-  switchTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  switchDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
-  },
-  cancelButtonText: {
-    color: '#6b7280',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  alertContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 300,
-    overflow: 'hidden',
-  },
-  alertHeader: {
-    padding: 20,
-    paddingBottom: 10,
-  },
-  alertTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  alertBody: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  alertMessage: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  alertFooter: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  alertButton: {
-    flex: 1,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  cancelAlertButton: {
-    borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
-  },
-  cancelAlertButtonText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '600',
-  },
-  dangerButton: {
-    backgroundColor: 'transparent',
-  },
-  dangerButtonText: {
-    fontSize: 16,
-    color: '#ef4444',
-    fontWeight: '600',
-  },
-  memberSince: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  bio: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 22,
-    marginTop: 8,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  locationText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginLeft: 4,
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  profileInfo: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-});
+
 
 export default ProfileScreen;

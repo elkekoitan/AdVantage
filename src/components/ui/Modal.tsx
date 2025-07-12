@@ -135,7 +135,7 @@ interface ConfirmationModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  confirmColorScheme?: string;
+  confirmColorScheme?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info';
   isLoading?: boolean;
 }
 

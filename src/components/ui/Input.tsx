@@ -6,9 +6,11 @@ import {
   Icon,
   Pressable,
   Box,
+  Text,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 
+// AdVantage Design System - Modern Input Component
 interface CustomInputProps extends IInputProps {
   label?: string;
   helperText?: string;
@@ -17,7 +19,9 @@ interface CustomInputProps extends IInputProps {
   leftIcon?: string;
   rightIcon?: string;
   onRightIconPress?: () => void;
-  variant?: 'outline' | 'filled' | 'underlined' | 'unstyled';
+  variant?: 'outline' | 'filled' | 'glass' | 'floating';
+  size?: 'sm' | 'md' | 'lg';
+  rounded?: 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export const Input: React.FC<CustomInputProps> = ({
@@ -29,37 +33,113 @@ export const Input: React.FC<CustomInputProps> = ({
   rightIcon,
   onRightIconPress,
   variant = 'outline',
+  size = 'md',
+  rounded = 'xl',
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const hasError = !!errorMessage;
+  const isFloating = variant === 'floating';
+
+  // Get variant styles
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'outline':
+        return {
+          borderWidth: 2,
+          borderColor: hasError ? 'danger.400' : isFocused ? 'primary.500' : 'gray.300',
+          bg: 'white',
+          _dark: {
+            bg: 'dark.100',
+            borderColor: hasError ? 'danger.400' : isFocused ? 'primary.500' : 'dark.300',
+          },
+        };
+      case 'filled':
+        return {
+          borderWidth: 0,
+          bg: 'gray.100',
+          _dark: {
+            bg: 'dark.200',
+          },
+        };
+      case 'glass':
+        return {
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          bg: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+        };
+      case 'floating':
+        return {
+          borderWidth: 2,
+          borderColor: hasError ? 'danger.400' : isFocused ? 'primary.500' : 'gray.300',
+          bg: 'white',
+          _dark: {
+            bg: 'dark.100',
+            borderColor: hasError ? 'danger.400' : isFocused ? 'primary.500' : 'dark.300',
+          },
+        };
+      default:
+        return {};
+    }
+  };
+
+  // Get size styles
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'sm':
+        return {
+          fontSize: 'sm',
+          py: 2,
+          px: 3,
+        };
+      case 'md':
+        return {
+          fontSize: 'md',
+          py: 3,
+          px: 4,
+        };
+      case 'lg':
+        return {
+          fontSize: 'lg',
+          py: 4,
+          px: 5,
+        };
+      default:
+        return {};
+    }
+  };
 
   return (
     <FormControl isRequired={isRequired} isInvalid={hasError}>
-      {label && (
-        <FormControl.Label
-          _text={{
-            fontSize: 'sm',
-            fontWeight: '600',
-            color: hasError ? 'danger.600' : 'gray.700',
+      {label && !isFloating && (
+        <Text
+          fontSize="sm"
+          fontWeight="600"
+          fontFamily="Inter"
+          color={hasError ? 'danger.600' : 'gray.700'}
+          mb={2}
+          _dark={{
+            color: hasError ? 'danger.400' : 'dark.700',
           }}
         >
           {label}
-        </FormControl.Label>
+          {isRequired && (
+            <Text color="danger.500" ml={1}>
+              *
+            </Text>
+          )}
+        </Text>
       )}
       
       <Box position="relative">
         <NBInput
-          variant={variant}
-          size="md"
-          borderRadius={8}
-          borderColor={hasError ? 'danger.400' : isFocused ? 'primary.400' : 'gray.300'}
-          borderWidth={variant === 'outline' ? 1 : 0}
-          bg={variant === 'filled' ? 'gray.50' : 'white'}
+          variant={variant === 'glass' || variant === 'floating' ? 'outline' : (variant as any)}
+          borderRadius={rounded}
+          fontFamily="Inter"
           _focus={{
-            borderColor: hasError ? 'danger.400' : 'primary.400',
-            bg: 'white',
-            shadow: 1,
+            borderColor: hasError ? 'danger.400' : 'primary.500',
+            shadow: 3,
           }}
           _invalid={{
             borderColor: 'danger.400',
@@ -68,51 +148,98 @@ export const Input: React.FC<CustomInputProps> = ({
           onBlur={() => setIsFocused(false)}
           InputLeftElement={
             leftIcon ? (
-              <Icon
-                as={MaterialIcons}
-                name={leftIcon}
-                size={5}
-                ml={3}
-                color={hasError ? 'danger.400' : isFocused ? 'primary.400' : 'gray.400'}
-              />
+              <Box ml={4}>
+                <Icon
+                  as={MaterialIcons}
+                  name={leftIcon}
+                  size={size === 'sm' ? 4 : size === 'md' ? 5 : 6}
+                  color={hasError ? 'danger.400' : isFocused ? 'primary.500' : 'gray.400'}
+                />
+              </Box>
             ) : undefined
           }
           InputRightElement={
             rightIcon ? (
-              <Pressable onPress={onRightIconPress} mr={3}>
+              <Pressable 
+                onPress={onRightIconPress} 
+                mr={4}
+                _pressed={{
+                  opacity: 0.7
+                }}
+              >
                 <Icon
                   as={MaterialIcons}
                   name={rightIcon}
-                  size={5}
-                  color={hasError ? 'danger.400' : isFocused ? 'primary.400' : 'gray.400'}
+                  size={size === 'sm' ? 4 : size === 'md' ? 5 : 6}
+                  color={hasError ? 'danger.400' : isFocused ? 'primary.500' : 'gray.400'}
                 />
               </Pressable>
             ) : undefined
           }
+          {...getVariantStyles()}
+          {...getSizeStyles()}
           {...props}
         />
+        
+        {/* Floating Label */}
+        {isFloating && label && (
+          <Box
+            position="absolute"
+            left={4}
+            top={isFocused || props.value ? -2 : 3}
+            bg={'white'}
+            px={2}
+            zIndex={1}
+            _dark={{
+              bg: 'dark.100',
+            }}
+          >
+            <Text
+              fontSize={isFocused || props.value ? 'xs' : 'md'}
+              fontWeight="500"
+              fontFamily="Inter"
+              color={hasError ? 'danger.600' : isFocused ? 'primary.500' : 'gray.500'}
+              _dark={{
+                color: hasError ? 'danger.400' : isFocused ? 'primary.400' : 'dark.500',
+              }}
+            >
+              {label}
+              {isRequired && (
+                <Text color="danger.500" ml={1}>
+                  *
+                </Text>
+              )}
+            </Text>
+          </Box>
+        )}
       </Box>
 
       {hasError && (
-        <FormControl.ErrorMessage
-          _text={{
-            fontSize: 'xs',
-            color: 'danger.600',
+        <Text
+          fontSize="xs"
+          color="danger.600"
+          fontFamily="Inter"
+          mt={1}
+          _dark={{
+            color: 'danger.400',
           }}
         >
           {errorMessage}
-        </FormControl.ErrorMessage>
+        </Text>
       )}
       
       {helperText && !hasError && (
-        <FormControl.HelperText
-          _text={{
-            fontSize: 'xs',
-            color: 'gray.500',
+        <Text
+          fontSize="xs"
+          color="gray.500"
+          fontFamily="Inter"
+          mt={1}
+          _dark={{
+            color: 'dark.500',
           }}
         >
           {helperText}
-        </FormControl.HelperText>
+        </Text>
       )}
     </FormControl>
   );

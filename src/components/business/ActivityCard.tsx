@@ -365,7 +365,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                   title="Sil"
                   variant="outline"
                   size="sm"
-                  colorScheme="error"
+                  colorScheme="danger"
                   leftIcon="delete"
                   onPress={() => onDelete(activity)}
                 />

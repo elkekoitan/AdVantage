@@ -1,26 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Platform,
+  Animated,
+  StatusBar,
+} from 'react-native';
 import {
   Box,
   VStack,
-  Heading,
+  HStack,
   Text,
   Input,
   Button,
-  HStack,
-  Link,
-  useToast,
-  KeyboardAvoidingView,
-  ScrollView,
-  Icon,
   Pressable,
+  ScrollView,
+  KeyboardAvoidingView,
+  Icon,
+  Divider,
+  useToast,
 } from 'native-base';
-import { Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import type { AuthStackParamList } from '../../types/navigation';
+
+
+
+// Dimensions removed as not needed with Native Base
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -31,17 +39,43 @@ export const LoginScreen = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Animasyon referansları
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    // Sayfa yüklenme animasyonu
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
       toast.show({
         title: 'Hata',
-        description: 'Lütfen e-posta ve şifre girin.',
-        colorScheme: 'error',
+        description: 'Lütfen e-posta ve şifre girin.'
       });
       return;
     }
@@ -59,8 +93,7 @@ export const LoginScreen = () => {
       }
       toast.show({
         title: 'Giriş Başarısız',
-        description: errorMessage,
-        colorScheme: 'error',
+        description: errorMessage
       });
     } finally {
       setLoading(false);
@@ -78,8 +111,7 @@ export const LoginScreen = () => {
       }
       toast.show({
         title: 'Giriş Başarısız',
-        description: errorMessage,
-        colorScheme: 'error',
+        description: errorMessage
       });
     } finally {
       setGoogleLoading(false);
@@ -97,8 +129,7 @@ export const LoginScreen = () => {
       }
       toast.show({
         title: 'Giriş Başarısız',
-        description: errorMessage,
-        colorScheme: 'error',
+        description: errorMessage
       });
     } finally {
       setAppleLoading(false);
@@ -106,159 +137,267 @@ export const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView 
       flex={1}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={{ flex: 1 }}
       >
-        <Box flex={1} bg="white" safeArea>
-          <VStack flex={1} px={6} py={8} space={6}>
-            {/* Header */}
-            <VStack space={2} alignItems="center" mt={8}>
-              <Heading size="2xl" fontWeight="bold" color="primary.600">
+        <ScrollView 
+          flex={1}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+        >
+          {/* Logo ve Başlık */}
+          <VStack space={6} alignItems="center" mb={8}>
+            <Box
+              w={20}
+              h={20}
+              borderRadius="full"
+              bg="white"
+              alignItems="center"
+              justifyContent="center"
+              shadow={3}
+            >
+              <Text fontSize="2xl" fontWeight="bold" color="primary.500">
+                A
+              </Text>
+            </Box>
+            <VStack space={2} alignItems="center">
+              <Text fontSize="3xl" fontWeight="bold" color="white">
+                AdVantage
+              </Text>
+              <Text fontSize="md" color="white" opacity={0.8}>
+                İş dünyasında avantajınız
+              </Text>
+            </VStack>
+          </VStack>
+          
+          {/* Login Card */}
+          <Animated.View
+            style={[
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <Box
+              bg="white"
+              borderRadius="2xl"
+              p={6}
+              mx={4}
+              shadow={9}
+              opacity={0.95}
+            >
+              <Text fontSize="2xl" fontWeight="bold" color="gray.800" textAlign="center" mb={6}>
                 Hoş Geldiniz
-              </Heading>
-              <Text fontSize="md" color="gray.600">
+              </Text>
+              <Text fontSize="md" color="gray.600" textAlign="center" mb={8}>
                 Hesabınıza giriş yapın
               </Text>
-            </VStack>
-
-            {/* Form */}
-            <VStack space={4} mt={8}>
-              <Input
-                placeholder="E-posta"
-                size="lg"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                InputLeftElement={
-                  <Icon
-                    as={MaterialIcons}
-                    name="email"
-                    size={5}
-                    ml={3}
-                    color="gray.400"
+              
+              <VStack space={4}>
+                {/* Email Input */}
+                <VStack space={2}>
+                  <Text fontSize="sm" fontWeight="medium" color="gray.600">
+                    E-posta
+                  </Text>
+                  <Input
+                    placeholder="E-posta adresinizi girin"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    size="lg"
+                    variant="filled"
+                    bg="gray.50"
+                    borderColor="gray.200"
+                    _focus={{
+                      bg: 'white',
+                      borderColor: 'primary.500',
+                      borderWidth: 2
+                    }}
+                    InputLeftElement={
+                      <Icon
+                        as={MaterialIcons}
+                        name="email"
+                        size={5}
+                        ml={3}
+                        color="gray.400"
+                      />
+                    }
                   />
-                }
-              />
+                </VStack>
 
-              <Input
-                placeholder="Şifre"
-                size="lg"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChangeText={setPassword}
-                InputLeftElement={
-                  <Icon
-                    as={MaterialIcons}
-                    name="lock"
-                    size={5}
-                    ml={3}
-                    color="gray.400"
+                {/* Password Input */}
+                <VStack space={2}>
+                  <Text fontSize="sm" fontWeight="medium" color="gray.600">
+                    Şifre
+                  </Text>
+                  <Input
+                    placeholder="Şifrenizi girin"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    size="lg"
+                    variant="filled"
+                    bg="gray.50"
+                    borderColor="gray.200"
+                    _focus={{
+                      bg: 'white',
+                      borderColor: 'primary.500',
+                      borderWidth: 2
+                    }}
+                    InputLeftElement={
+                      <Icon
+                        as={MaterialIcons}
+                        name="lock"
+                        size={5}
+                        ml={3}
+                        color="gray.400"
+                      />
+                    }
+                    InputRightElement={
+                      <Pressable onPress={() => setShowPassword(!showPassword)} mr={3}>
+                        <Icon
+                          as={MaterialIcons}
+                          name={showPassword ? 'visibility' : 'visibility-off'}
+                          size={5}
+                          color="gray.400"
+                        />
+                      </Pressable>
+                    }
                   />
-                }
-                InputRightElement={
-                  <Pressable onPress={() => setShowPassword(!showPassword)}>
-                    <Icon
-                      as={MaterialIcons}
-                      name={showPassword ? 'visibility' : 'visibility-off'}
-                      size={5}
-                      mr={3}
-                      color="gray.400"
-                    />
-                  </Pressable>
-                }
-              />
-
-              <HStack justifyContent="flex-end">
-                <Link
-                  _text={{
-                    fontSize: 'sm',
-                    fontWeight: '500',
-                    color: 'primary.600',
-                  }}
-                  onPress={() => navigation.navigate('ForgotPassword')}
-                >
-                  Şifremi Unuttum
-                </Link>
-              </HStack>
-            </VStack>
-
-            {/* Login Button */}
-            <Button
-              size="lg"
-              colorScheme="primary"
-              onPress={handleLogin}
-              isLoading={loading}
-              isLoadingText="Giriş yapılıyor..."
-              mt={4}
-            >
-              Giriş Yap
-            </Button>
-
-            {/* Social Login */}
-            <VStack space={3} mt={6}>
-              <HStack alignItems="center" space={2}>
-                <Box flex={1} h={0.5} bg="gray.300" />
-                <Text fontSize="sm" color="gray.500">
+                </VStack>
+                
+                {/* Forgot Password */}
+                 <Pressable 
+                   alignSelf="flex-end"
+                   onPress={() => navigation.navigate('ForgotPassword' as any)}
+                   mt={2}
+                 >
+                   <Text fontSize="sm" color="primary.500" fontWeight="medium">
+                     Şifremi Unuttum
+                   </Text>
+                 </Pressable>
+              </VStack>
+              
+              {/* Login Button */}
+              <Button
+                onPress={handleLogin}
+                isLoading={loading}
+                isDisabled={loading}
+                size="lg"
+                colorScheme="primary"
+                borderRadius="xl"
+                mt={6}
+                _text={{
+                  fontSize: 'md',
+                  fontWeight: 'bold'
+                }}
+              >
+                {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+              </Button>
+              
+              {/* Divider */}
+              <HStack alignItems="center" my={6}>
+                <Divider flex={1} />
+                <Text px={3} fontSize="sm" color="gray.500">
                   veya
                 </Text>
-                <Box flex={1} h={0.5} bg="gray.300" />
+                <Divider flex={1} />
               </HStack>
-
-              <HStack space={3}>
+              
+              {/* Social Login */}
+              <VStack space={3}>
                 <Button
-                  flex={1}
-                  variant="outline"
-                  colorScheme="gray"
-                  leftIcon={
-                    <Icon as={MaterialIcons} name="g-mobiledata" size={6} />
-                  }
                   onPress={handleGoogleLogin}
                   isLoading={googleLoading}
-                  isLoadingText="Google..."
-                >
-                  Google
-                </Button>
-                <Button
-                  flex={1}
+                  isDisabled={googleLoading}
                   variant="outline"
-                  colorScheme="gray"
+                  size="lg"
+                  borderRadius="xl"
+                  borderColor="gray.300"
+                  bg="white"
+                  _text={{
+                    color: 'gray.700',
+                    fontSize: 'md',
+                    fontWeight: 'medium'
+                  }}
+                  _pressed={{
+                    bg: 'gray.50'
+                  }}
                   leftIcon={
-                    <Icon as={MaterialIcons} name="apple" size={5} />
+                    <Icon
+                      as={MaterialIcons}
+                      name="google"
+                      size={5}
+                      color="red.500"
+                    />
                   }
-                  onPress={handleAppleLogin}
-                  isLoading={appleLoading}
-                  isLoadingText="Apple..."
                 >
-                  Apple
+                  {googleLoading ? 'Yükleniyor...' : 'Google ile Giriş'}
                 </Button>
-              </HStack>
-            </VStack>
-
-            {/* Register Link */}
-            <HStack justifyContent="center" mt="auto">
-              <Text fontSize="sm" color="gray.600">
-                Hesabınız yok mu?{' '}
-              </Text>
-              <Link
-                _text={{
-                  color: 'primary.600',
-                  fontWeight: 'medium',
-                  fontSize: 'sm',
-                }}
-                onPress={() => navigation.navigate('Register', {})}
-              >
-                Kayıt Ol
-              </Link>
-            </HStack>
-          </VStack>
-        </Box>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                
+                {Platform.OS === 'ios' && (
+                  <Button
+                    onPress={handleAppleLogin}
+                    isLoading={appleLoading}
+                    isDisabled={appleLoading}
+                    variant="solid"
+                    size="lg"
+                    borderRadius="xl"
+                    bg="black"
+                    _text={{
+                      color: 'white',
+                      fontSize: 'md',
+                      fontWeight: 'medium'
+                    }}
+                    _pressed={{
+                      bg: 'gray.800'
+                    }}
+                    leftIcon={
+                      <Icon
+                        as={MaterialIcons}
+                        name="apple"
+                        size={5}
+                        color="white"
+                      />
+                    }
+                  >
+                    {appleLoading ? 'Yükleniyor...' : 'Apple ile Giriş'}
+                  </Button>
+                )}
+              </VStack>
+            </Box>
+          </Animated.View>
+          
+          {/* Register Link */}
+           <HStack justifyContent="center" mt={6} space={1}>
+             <Text fontSize="md" color="white" opacity={0.8}>
+               Hesabınız yok mu?
+             </Text>
+             <Pressable onPress={() => navigation.navigate('Register' as any)}>
+                <Text fontSize="md" color="white" fontWeight="bold" underline>
+                  Kayıt Ol
+                </Text>
+              </Pressable>
+           </HStack>
+         </ScrollView>
+       </LinearGradient>
+     </KeyboardAvoidingView>
   );
 };
+
+
+
+export default LoginScreen;
