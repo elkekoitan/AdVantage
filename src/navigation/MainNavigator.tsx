@@ -19,6 +19,10 @@ import ExploreScreen from '../screens/main/ExploreScreen';
 import { ProgramScreen } from '../screens/main/ProgramScreen';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import MapScreen from '../screens/main/MapScreen';
+import { SettingsScreen } from '../screens/main/SettingsScreen';
+import { NotificationsScreen } from '../screens/main/NotificationsScreen';
+import { ChatScreen } from '../screens/main/ChatScreen';
+import { ActivityDetailScreen } from '../screens/main/ActivityDetailScreen';
 
 // Import stack screens
 import { ProgramDetailsScreen } from '../screens/programs/ProgramDetailsScreen';
@@ -45,6 +49,10 @@ export type MainStackParamList = {
     searchQuery?: string;
     places?: PlaceResult[];
   };
+  Settings: undefined;
+  Notifications: undefined;
+  Chat: { chatId?: string; chatType?: 'direct' | 'group' | 'program'; participantId?: string; programId?: string };
+  ActivityDetail: { activityId: string };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -175,6 +183,38 @@ export const MainNavigator = () => {
           headerShown: true,
           headerTitle: 'Harita',
           headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Ayarlar',
+        }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Bildirimler',
+        }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Sohbet',
+        }}
+      />
+      <Stack.Screen
+        name="ActivityDetail"
+        component={ActivityDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Aktivite Detayları',
         }}
       />
     </Stack.Navigator>

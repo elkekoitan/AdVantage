@@ -1,8 +1,12 @@
 import axios from 'axios';
+import * as Location from 'expo-location';
 
 // OpenRouteService API configuration
 const ORS_API_KEY = process.env.EXPO_PUBLIC_OPENROUTE_API_KEY || 'your_openroute_service_api_key';
 const ORS_BASE_URL = 'https://api.openrouteservice.org';
+
+// Overpass API for POI data
+const OVERPASS_API_URL = 'https://overpass-api.de/api/interpreter';
 
 // Create axios instance with default config
 const orsApi = axios.create({
@@ -18,6 +22,62 @@ const orsApi = axios.create({
 export interface Coordinates {
   lat: number;
   lng: number;
+}
+
+export interface LocationPermissionResult {
+  granted: boolean;
+  canAskAgain?: boolean;
+  status: Location.PermissionStatus;
+}
+
+export interface PlaceDetails {
+  id: string;
+  name: string;
+  address: string;
+  coordinates: Coordinates;
+  category: string;
+  rating?: number;
+  reviews?: PlaceReview[];
+  photos?: string[];
+  openingHours?: OpeningHours;
+  contact?: ContactInfo;
+  website?: string;
+  description?: string;
+}
+
+export interface PlaceReview {
+  id: string;
+  author: string;
+  rating: number;
+  text: string;
+  date: string;
+}
+
+export interface OpeningHours {
+  isOpen: boolean;
+  periods: Array<{
+    day: number; // 0-6 (Sunday-Saturday)
+    open: string; // HH:MM format
+    close: string; // HH:MM format
+  }>;
+  weekdayText: string[];
+}
+
+export interface ContactInfo {
+  phone?: string;
+  email?: string;
+  website?: string;
+}
+
+export interface SearchFilters {
+  category?: string;
+  radius?: number;
+  minRating?: number;
+  priceLevel?: 'free' | 'inexpensive' | 'moderate' | 'expensive' | 'very_expensive';
+  openNow?: boolean;
+  hasWifi?: boolean;
+  hasParking?: boolean;
+  isAccessible?: boolean;
 }
 
 export interface RouteResponse {
@@ -123,8 +183,23 @@ export interface POIResponse {
       osm_id?: string;
       osm_type?: string;
       extent?: number[];
+      rating?: number;
+      address?: string;
+      phone?: string;
+      website?: string;
+      opening_hours?: string;
+      amenity?: string;
+      cuisine?: string;
+      price_level?: string;
     };
   }>;
+}
+
+export interface EnhancedPOIResponse {
+  places: PlaceDetails[];
+  totalCount: number;
+  hasMore: boolean;
+  nextPageToken?: string;
 }
 
 export interface OptimizationResponse {
@@ -167,6 +242,90 @@ export interface ElevationResponse {
 }
 
 class OpenRouteService {
+  /**
+   * Request location permissions
+   */
+  async requestLocationPermission(): Promise<LocationPermissionResult> {
+    try {
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+      
+      return {
+        granted: status === Location.PermissionStatus.GRANTED,
+        canAskAgain,
+        status
+      };
+    } catch (error) {
+      console.error('Location permission error:', error);
+      return {
+        granted: false,
+        status: Location.PermissionStatus.DENIED
+      };
+    }
+  }
+
+  /**
+   * Get current user location
+   */
+  async getCurrentLocation(): Promise<Coordinates> {
+    try {
+      const permission = await this.requestLocationPermission();
+      if (!permission.granted) {
+        throw new Error('Konum izni verilmedi');
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 5000,
+        distanceInterval: 10
+      });
+
+      return {
+        lat: location.coords.latitude,
+        lng: location.coords.longitude
+      };
+    } catch (error) {
+      console.error('Get current location error:', error);
+      throw new Error('Mevcut konum alınamadı');
+    }
+  }
+
+  /**
+   * Watch user location changes
+   */
+  async watchLocation(
+    callback: (location: Coordinates) => void,
+    errorCallback?: (error: Error) => void
+  ): Promise<{ remove: () => void }> {
+    try {
+      const permission = await this.requestLocationPermission();
+      if (!permission.granted) {
+        throw new Error('Konum izni verilmedi');
+      }
+
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000,
+          distanceInterval: 10
+        },
+        (location) => {
+          callback({
+            lat: location.coords.latitude,
+            lng: location.coords.longitude
+          });
+        }
+      );
+
+      return subscription;
+    } catch (error) {
+      console.error('Watch location error:', error);
+      if (errorCallback) {
+        errorCallback(new Error('Konum takibi başlatılamadı'));
+      }
+      return { remove: () => {} };
+    }
+  }
+
   /**
    * Get directions between two points
    */
@@ -315,7 +474,7 @@ class OpenRouteService {
   }
 
   /**
-   * Find nearest POIs (Points of Interest)
+   * Find nearest POIs (Points of Interest) - Enhanced version
    */
   async findNearbyPOIs(
     location: Coordinates,
@@ -343,6 +502,285 @@ class OpenRouteService {
       console.error('OpenRouteService POI search error:', error);
       throw new Error('Yakındaki yerler bulunamadı');
     }
+  }
+
+  /**
+   * Enhanced POI search with filters
+   */
+  async searchPlaces(
+    location: Coordinates,
+    query: string,
+    filters: SearchFilters = {}
+  ): Promise<EnhancedPOIResponse> {
+    try {
+      const radius = filters.radius || 5000;
+      
+      // Build Overpass query for more detailed POI data
+      const overpassQuery = this.buildOverpassQuery(location, query, radius, filters);
+      
+      const response = await axios.post(OVERPASS_API_URL, overpassQuery, {
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        timeout: 15000
+      });
+
+      const places = this.parseOverpassResponse(response.data, filters);
+      
+      return {
+        places,
+        totalCount: places.length,
+        hasMore: places.length >= 20,
+        nextPageToken: places.length >= 20 ? 'next_page_token' : undefined
+      };
+    } catch (error) {
+      console.error('Enhanced POI search error:', error);
+      // Fallback to basic search
+      const basicResult = await this.findNearbyPOIs(location, query, filters.radius);
+      return {
+        places: this.convertBasicPOIToPlaceDetails(basicResult.features),
+        totalCount: basicResult.features.length,
+        hasMore: false
+      };
+    }
+  }
+
+  /**
+   * Get detailed information about a specific place
+   */
+  async getPlaceDetails(placeId: string): Promise<PlaceDetails | null> {
+    try {
+      // In a real implementation, this would fetch from a places API
+      // For now, we'll simulate place details
+      const mockDetails: PlaceDetails = {
+        id: placeId,
+        name: 'Örnek Mekan',
+        address: 'Örnek Adres, İstanbul',
+        coordinates: { lat: 41.0082, lng: 28.9784 },
+        category: 'restaurant',
+        rating: 4.2,
+        reviews: [
+          {
+            id: '1',
+            author: 'Kullanıcı 1',
+            rating: 5,
+            text: 'Harika bir yer!',
+            date: '2024-01-15'
+          }
+        ],
+        openingHours: {
+          isOpen: true,
+          periods: [
+            { day: 1, open: '09:00', close: '22:00' },
+            { day: 2, open: '09:00', close: '22:00' },
+            { day: 3, open: '09:00', close: '22:00' },
+            { day: 4, open: '09:00', close: '22:00' },
+            { day: 5, open: '09:00', close: '23:00' },
+            { day: 6, open: '10:00', close: '23:00' },
+            { day: 0, open: '10:00', close: '21:00' }
+          ],
+          weekdayText: [
+            'Pazartesi: 09:00-22:00',
+            'Salı: 09:00-22:00',
+            'Çarşamba: 09:00-22:00',
+            'Perşembe: 09:00-22:00',
+            'Cuma: 09:00-23:00',
+            'Cumartesi: 10:00-23:00',
+            'Pazar: 10:00-21:00'
+          ]
+        },
+        contact: {
+          phone: '+90 212 555 0123',
+          website: 'https://example.com'
+        },
+        description: 'Güzel bir restoran deneyimi sunan mekan.'
+      };
+
+      return mockDetails;
+    } catch (error) {
+      console.error('Get place details error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get reviews for a specific place
+   */
+  async getPlaceReviews(_placeId: string, limit: number = 10): Promise<PlaceReview[]> {
+    try {
+      // Mock reviews - in real implementation, this would fetch from a reviews API
+      const mockReviews: PlaceReview[] = [
+        {
+          id: '1',
+          author: 'Ahmet Y.',
+          rating: 5,
+          text: 'Mükemmel hizmet ve lezzetli yemekler. Kesinlikle tavsiye ederim!',
+          date: '2024-01-15'
+        },
+        {
+          id: '2',
+          author: 'Fatma K.',
+          rating: 4,
+          text: 'Güzel atmosfer, fiyatlar uygun. Tekrar geleceğim.',
+          date: '2024-01-10'
+        },
+        {
+          id: '3',
+          author: 'Mehmet S.',
+          rating: 5,
+          text: 'Harika bir deneyimdi. Personel çok ilgili.',
+          date: '2024-01-08'
+        }
+      ];
+
+      return mockReviews.slice(0, limit);
+    } catch (error) {
+      console.error('Get place reviews error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search places by text query
+   */
+  async searchPlacesByText(
+    query: string,
+    location?: Coordinates,
+    radius: number = 10000
+  ): Promise<EnhancedPOIResponse> {
+    try {
+      const searchParams: any = {
+        text: query,
+        size: 20,
+        layers: 'venue,address'
+      };
+
+      if (location) {
+        searchParams['focus.point.lat'] = location.lat;
+        searchParams['focus.point.lon'] = location.lng;
+        searchParams['boundary.circle.lat'] = location.lat;
+        searchParams['boundary.circle.lon'] = location.lng;
+        searchParams['boundary.circle.radius'] = radius / 1000;
+      }
+
+      const response = await orsApi.get('/geocode/search', {
+        params: searchParams
+      });
+
+      const places = this.convertBasicPOIToPlaceDetails(response.data.features);
+      
+      return {
+        places,
+        totalCount: places.length,
+        hasMore: places.length >= 20
+      };
+    } catch (error) {
+      console.error('Search places by text error:', error);
+      throw new Error('Mekan arama başarısız');
+    }
+  }
+
+  /**
+   * Build Overpass API query for POI search
+   */
+  private buildOverpassQuery(
+    location: Coordinates,
+    query: string,
+    radius: number,
+    _filters: SearchFilters
+  ): string {
+    const bbox = this.calculateBoundingBox(location, radius);
+    
+    let overpassQuery = `
+      [out:json][timeout:25];
+      (
+        node["amenity"~"${query}"]["name"](${bbox});
+        way["amenity"~"${query}"]["name"](${bbox});
+        relation["amenity"~"${query}"]["name"](${bbox});
+      );
+      out center meta;
+    `;
+
+    return overpassQuery;
+  }
+
+  /**
+   * Parse Overpass API response
+   */
+  private parseOverpassResponse(data: any, _filters: SearchFilters): PlaceDetails[] {
+    if (!data.elements) return [];
+
+    return data.elements.map((element: any): PlaceDetails => {
+      const coords = element.type === 'node' 
+        ? { lat: element.lat, lng: element.lon }
+        : { lat: element.center?.lat || 0, lng: element.center?.lon || 0 };
+
+      return {
+        id: element.id.toString(),
+        name: element.tags?.name || 'İsimsiz Mekan',
+        address: this.buildAddress(element.tags),
+        coordinates: coords,
+        category: element.tags?.amenity || 'unknown',
+        rating: this.generateMockRating(),
+        contact: {
+          phone: element.tags?.phone,
+          website: element.tags?.website
+        }
+      };
+    }).filter((place: PlaceDetails) => place.coordinates.lat !== 0 && place.coordinates.lng !== 0);
+  }
+
+  /**
+   * Convert basic POI response to PlaceDetails
+   */
+  private convertBasicPOIToPlaceDetails(features: any[]): PlaceDetails[] {
+    return features.map((feature: any): PlaceDetails => ({
+      id: feature.properties.id || Math.random().toString(),
+      name: feature.properties.name || 'İsimsiz Mekan',
+      address: feature.properties.label || 'Adres bilgisi yok',
+      coordinates: {
+        lat: feature.geometry.coordinates[1],
+        lng: feature.geometry.coordinates[0]
+      },
+      category: feature.properties.layer || 'unknown',
+      rating: this.generateMockRating()
+    }));
+  }
+
+  /**
+   * Calculate bounding box for location and radius
+   */
+  private calculateBoundingBox(location: Coordinates, radius: number): string {
+    const earthRadius = 6371000; // meters
+    const latDelta = (radius / earthRadius) * (180 / Math.PI);
+    const lngDelta = (radius / earthRadius) * (180 / Math.PI) / Math.cos(location.lat * Math.PI / 180);
+
+    const south = location.lat - latDelta;
+    const north = location.lat + latDelta;
+    const west = location.lng - lngDelta;
+    const east = location.lng + lngDelta;
+
+    return `${south},${west},${north},${east}`;
+  }
+
+  /**
+   * Build address from OSM tags
+   */
+  private buildAddress(tags: any): string {
+    const parts = [];
+    if (tags['addr:street']) parts.push(tags['addr:street']);
+    if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
+    if (tags['addr:district']) parts.push(tags['addr:district']);
+    if (tags['addr:city']) parts.push(tags['addr:city']);
+    
+    return parts.length > 0 ? parts.join(', ') : 'Adres bilgisi yok';
+  }
+
+  /**
+   * Generate mock rating for places
+   */
+  private generateMockRating(): number {
+    return Math.round((Math.random() * 2 + 3) * 10) / 10; // 3.0 - 5.0 range
   }
 
   /**

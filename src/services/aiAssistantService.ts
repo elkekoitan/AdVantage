@@ -230,53 +230,118 @@ class AIAssistantService {
   ): Promise<DailyTimeline> {
     const today = new Date().toISOString().split('T')[0];
     
-    // Get user's current location and preferences
-    const prompt = `
-      Kullanıcı için günlük timeline oluştur:
-      
-      Kullanıcı Tercihleri:
-      - Uyanma saati: ${preferences.wakeUpTime}
-      - Uyku saati: ${preferences.sleepTime}
-      - Bütçe aralığı: ${preferences.budgetRange.min}-${preferences.budgetRange.max} TL
-      - İlgi alanları: ${preferences.interests.join(', ')}
-      - Fitness seviyesi: ${preferences.fitnessLevel}
-      - Sosyal tercih: ${preferences.socialPreference}
-      - Şehir: ${preferences.location.city}
-      
-      Mevcut ruh hali: ${mood}
-      
-      Günlük timeline JSON formatında döndür:
-      {
-        "date": "${today}",
-        "activities": [
-          {
-            "id": "unique_id",
-            "title": "Sabah Sporu",
-            "description": "Açıklama",
-            "startTime": "07:00",
-            "endTime": "08:00",
-            "type": "sport",
-            "location": {
-              "name": "Mekan adı",
-              "address": "Adres",
-              "latitude": 41.0082,
-              "longitude": 28.9784
-            },
-            "budget": {"min": 0, "max": 50, "currency": "TL"},
-            "discount": {"percentage": 20, "description": "İndirim açıklaması", "validUntil": "2024-12-31"}
-          }
-        ],
-        "totalBudget": 200,
-        "estimatedSavings": 50,
-        "moodAnalysis": {
-          "primary": "${mood}",
-          "secondary": "productive",
-          "recommendations": ["Öneri 1", "Öneri 2"]
-        }
-      }
-    `;
-
     try {
+      const aiRequest = {
+        user_preferences: {
+          interests: preferences.interests,
+          activity_types: ['breakfast', 'sport', 'shopping', 'entertainment', 'work', 'social'],
+          wakeUpTime: preferences.wakeUpTime || '08:00',
+          sleepTime: preferences.sleepTime || '23:00',
+          budgetRange: preferences.budgetRange,
+          location: {
+            latitude: preferences.location.latitude,
+            longitude: preferences.location.longitude,
+            city: preferences.location.city
+          },
+          fitnessLevel: preferences.fitnessLevel,
+          socialPreference: preferences.socialPreference,
+          dietaryRestrictions: preferences.dietaryRestrictions
+        },
+        date: today,
+        location: preferences.location.city,
+        budget: preferences.budgetRange.max,
+        duration: '1 gün',
+        group_size: 1,
+        mood: mood
+      };
+
+      const program = await geminiService.generateDailyProgram(aiRequest);
+      
+      if (program) {
+        const timeline: DailyTimeline = {
+          date: today,
+          activities: program.activities.map((activity: any, index: number): TimelineActivity => ({
+            id: (index + 1).toString(),
+            title: activity.title,
+            description: activity.description,
+            startTime: activity.start_time,
+            endTime: activity.end_time,
+            type: activity.type,
+            location: activity.location ? {
+              name: activity.location.name,
+              address: activity.location.address,
+              latitude: activity.location.latitude,
+              longitude: activity.location.longitude
+            } : undefined,
+            budget: {
+              min: activity.estimated_cost * 0.8,
+              max: activity.estimated_cost,
+              currency: 'TL'
+            },
+            discount: activity.discount,
+            mood: mood as 'energetic' | 'relaxed' | 'social' | 'productive' | 'creative'
+          })),
+          totalBudget: program.total_estimated_cost,
+          estimatedSavings: (program as any).estimated_savings || 0,
+          moodAnalysis: {
+            primary: mood,
+            secondary: 'productive',
+            recommendations: (program as any).recommendations || ['Güne pozitif başlayın']
+          }
+        };
+        
+        // Save timeline to database
+        await this.saveTimelineToDatabase(userId, timeline);
+        
+        return timeline;
+      }
+      
+      // Fallback to prompt-based generation
+      const prompt = `
+        Kullanıcı için günlük timeline oluştur:
+        
+        Kullanıcı Tercihleri:
+        - Uyanma saati: ${preferences.wakeUpTime}
+        - Uyku saati: ${preferences.sleepTime}
+        - Bütçe aralığı: ${preferences.budgetRange.min}-${preferences.budgetRange.max} TL
+        - İlgi alanları: ${preferences.interests.join(', ')}
+        - Fitness seviyesi: ${preferences.fitnessLevel}
+        - Sosyal tercih: ${preferences.socialPreference}
+        - Şehir: ${preferences.location.city}
+        
+        Mevcut ruh hali: ${mood}
+        
+        Günlük timeline JSON formatında döndür:
+        {
+          "date": "${today}",
+          "activities": [
+            {
+              "id": "unique_id",
+              "title": "Sabah Sporu",
+              "description": "Açıklama",
+              "startTime": "07:00",
+              "endTime": "08:00",
+              "type": "sport",
+              "location": {
+                "name": "Mekan adı",
+                "address": "Adres",
+                "latitude": 41.0082,
+                "longitude": 28.9784
+              },
+              "budget": {"min": 0, "max": 50, "currency": "TL"},
+              "discount": {"percentage": 20, "description": "İndirim açıklaması", "validUntil": "2024-12-31"}
+            }
+          ],
+          "totalBudget": 200,
+          "estimatedSavings": 50,
+          "moodAnalysis": {
+            "primary": "${mood}",
+            "secondary": "productive",
+            "recommendations": ["Öneri 1", "Öneri 2"]
+          }
+        }
+      `;
+
       const result = await geminiService.generateResponse(prompt);
       const timeline = JSON.parse(result);
       
@@ -298,36 +363,59 @@ class AIAssistantService {
     // Get user preferences and location
     const preferences = await this.getUserPreferences(userId);
     
-    const prompt = `
-      ${category} kategorisinde ${mood} ruh haline uygun öneriler oluştur.
-      
-      Kullanıcı konumu: ${preferences?.location.city}
-      İlgi alanları: ${preferences?.interests.join(', ')}
-      Bütçe: ${preferences?.budgetRange.min}-${preferences?.budgetRange.max} TL
-      
-      JSON array formatında 5 öneri döndür:
-      [
-        {
-          "id": "unique_id",
-          "title": "Öneri başlığı",
-          "description": "Açıklama",
-          "category": "${category}",
-          "rating": 4.5,
-          "price": 100,
-          "discount": 15,
-          "location": "Konum",
-          "image": "image_url",
-          "tags": ["tag1", "tag2"]
-        }
-      ]
-    `;
-
     try {
-      const result = await geminiService.generateResponse(prompt);
-      return JSON.parse(result);
+      const recommendations = await geminiService.generateRecommendations(
+        userId,
+        category,
+        preferences?.location.city || 'İstanbul',
+        preferences?.budgetRange.max || 500
+      );
+      
+      return recommendations.map((rec: any) => ({
+        id: rec.id || Math.random().toString(36).substr(2, 9),
+        title: rec.title,
+        description: rec.description,
+        category: rec.category,
+        rating: rec.rating || 4.0,
+        price: rec.price || 0,
+        location: rec.location,
+        discount: rec.discount || 0,
+        tags: rec.tags || []
+      }));
     } catch (error) {
       console.error('Recommendation generation error:', error);
-      return [];
+      // Fallback to prompt-based generation
+      const prompt = `
+        ${category} kategorisinde ${mood} ruh haline uygun öneriler oluştur.
+        
+        Kullanıcı konumu: ${preferences?.location.city}
+        İlgi alanları: ${preferences?.interests.join(', ')}
+        Bütçe: ${preferences?.budgetRange.min}-${preferences?.budgetRange.max} TL
+        
+        JSON array formatında 5 öneri döndür:
+        [
+          {
+            "id": "unique_id",
+            "title": "Öneri başlığı",
+            "description": "Açıklama",
+            "category": "${category}",
+            "rating": 4.5,
+            "price": 100,
+            "discount": 15,
+            "location": "Konum",
+            "image": "image_url",
+            "tags": ["tag1", "tag2"]
+          }
+        ]
+      `;
+
+      try {
+        const result = await geminiService.generateResponse(prompt);
+        return JSON.parse(result);
+      } catch (fallbackError) {
+        console.error('Fallback recommendation generation error:', fallbackError);
+        return [];
+      }
     }
   }
 

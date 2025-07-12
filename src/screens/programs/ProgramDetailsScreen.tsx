@@ -31,9 +31,9 @@ import { RefreshControl } from 'react-native';
 
 // Remove unused import
 import { supabase } from '../../services/supabase';
-import { RootStackParamList } from '../../types';
+import { MainStackParamList } from '../../navigation/MainNavigator';
 
-type ProgramDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProgramDetail'>;
+type ProgramDetailsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ProgramDetails'>;
 type ProgramDetailsScreenRouteProp = RouteProp<{ ProgramDetails: { programId: string } }, 'ProgramDetails'>;
 
 interface Program {
@@ -679,37 +679,41 @@ export const ProgramDetailsScreen = () => {
                 </Card>
               ) : (
                 activities.map((activity) => (
-                  <Card key={activity.id}>
-                    <VStack space={3} p={4}>
-                      <HStack justifyContent="space-between" alignItems="flex-start">
-                        <HStack space={3} flex={1}>
-                          <Icon
-                            as={MaterialIcons}
-                            name={getActivityIcon(activity.type)}
-                            size={6}
-                            color="primary.500"
-                          />
-                          <VStack flex={1} space={1}>
-                            <Text fontSize="md" fontWeight="semibold">
-                              {activity.title}
-                            </Text>
-                            <Text fontSize="sm" color="gray.600">
-                              {activity.description}
-                            </Text>
-                            <HStack space={4} alignItems="center">
-                              <Text fontSize="xs" color="green.600" fontWeight="medium">
-                                ₺{activity.estimated_cost.toLocaleString()}
+                  <Pressable
+                    key={activity.id}
+                    onPress={() => navigation.navigate('ActivityDetail', { activityId: activity.id })}
+                  >
+                    <Card>
+                      <VStack space={3} p={4}>
+                        <HStack justifyContent="space-between" alignItems="flex-start">
+                          <HStack space={3} flex={1}>
+                            <Icon
+                              as={MaterialIcons}
+                              name={getActivityIcon(activity.type)}
+                              size={6}
+                              color="primary.500"
+                            />
+                            <VStack flex={1} space={1}>
+                              <Text fontSize="md" fontWeight="semibold">
+                                {activity.title}
                               </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                {activity.duration_hours} saat
+                              <Text fontSize="sm" color="gray.600">
+                                {activity.description}
                               </Text>
-                            </HStack>
-                          </VStack>
+                              <HStack space={4} alignItems="center">
+                                <Text fontSize="xs" color="green.600" fontWeight="medium">
+                                  ₺{activity.estimated_cost.toLocaleString()}
+                                </Text>
+                                <Text fontSize="xs" color="gray.500">
+                                  {activity.duration_hours} saat
+                                </Text>
+                              </HStack>
+                            </VStack>
+                          </HStack>
+                          <Badge colorScheme={getStatusColor(activity.status)} variant="solid">
+                            {getStatusText(activity.status)}
+                          </Badge>
                         </HStack>
-                        <Badge colorScheme={getStatusColor(activity.status)} variant="solid">
-                          {getStatusText(activity.status)}
-                        </Badge>
-                      </HStack>
 
                       {activity.status === 'planned' && program.status === 'active' && (
                         <HStack space={2}>
@@ -740,9 +744,9 @@ export const ProgramDetailsScreen = () => {
                         >
                           Tamamla
                         </Button>
-                      )}
-                    </VStack>
-                  </Card>
+                      )}                    </VStack>
+                    </Card>
+                  </Pressable>
                 ))
               )}
             </VStack>

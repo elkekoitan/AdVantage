@@ -46,7 +46,8 @@ export interface Program {
   target_amount: number;
   start_date: string;
   end_date: string;
-  status: 'active' | 'completed' | 'paused' | 'cancelled';
+  status: 'active' | 'completed' | 'paused' | 'cancelled' | 'draft';
+  completed_at?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   auto_tracking: boolean;
   notifications_enabled: boolean;
@@ -64,8 +65,12 @@ export interface Activity {
   title: string;
   description: string;
   category: string;
+  type: string;
   target_amount: number;
   current_amount: number;
+  estimated_cost: number;
+  duration_hours: number;
+  location: string;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   due_date?: string;
   created_at: string;

@@ -44,6 +44,9 @@ const colors = {
 
 
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../../navigation/MainNavigator';
 
 interface UserProfile {
   id: string;
@@ -79,8 +82,11 @@ interface Achievement {
   target?: number;
 }
 
+type ProfileScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
+
 export const ProfileScreen = () => {
   const { user, signOut } = useAuth();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const toast = useToast();
   const cancelRef = useRef(null);
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
@@ -471,12 +477,7 @@ export const ProfileScreen = () => {
           <Box bg="white" borderRadius={12} overflow="hidden" shadow={1}>
             <Pressable
               p={4}
-              onPress={() => {
-                toast.show({
-                  title: 'Yakında',
-                  description: 'Bildirim ayarları yakında gelecek!',
-                });
-              }}
+              onPress={() => navigation.navigate('Notifications')}
             >
               <HStack alignItems="center">
                 <Icon as={MaterialIcons} name="notifications" size={6} color="gray.500" />
@@ -494,21 +495,16 @@ export const ProfileScreen = () => {
             <Divider />
             <Pressable
               p={4}
-              onPress={() => {
-                toast.show({
-                  title: 'Yakında',
-                  description: 'Gizlilik ayarları yakında gelecek!',
-                });
-              }}
+              onPress={() => navigation.navigate('Settings')}
             >
               <HStack alignItems="center">
                 <Icon as={MaterialIcons} name="security" size={6} color="gray.500" />
                 <VStack flex={1} ml={3}>
                   <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
-                    Gizlilik
+                    Ayarlar
                   </Text>
                   <Text fontSize="sm" color="gray.500">
-                    Veri paylaşımı ve gizlilik tercihleri
+                    Gizlilik, güvenlik ve uygulama ayarları
                   </Text>
                 </VStack>
                 <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />

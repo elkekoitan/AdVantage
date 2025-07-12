@@ -339,13 +339,43 @@ export const HomeScreen = () => {
                   </Text>
                 </VStack>
               </HStack>
-              <IconButton
-                icon={<MaterialIcons name="logout" size={24} />}
-                onPress={signOut}
-                variant="ghost"
-                rounded="full"
-                colorScheme="primary"
-              />
+              <HStack space={2}>
+                <IconButton
+                  icon={<MaterialIcons name="chat" size={24} />}
+                  onPress={() => navigation.navigate('Chat', {})}
+                  variant="ghost"
+                  rounded="full"
+                  colorScheme="primary"
+                />
+                <Box position="relative">
+                  <IconButton
+                    icon={<MaterialIcons name="notifications" size={24} />}
+                    onPress={() => navigation.navigate('Notifications')}
+                    variant="ghost"
+                    rounded="full"
+                    colorScheme="primary"
+                  />
+                  <Badge
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    bg="red.500"
+                    rounded="full"
+                    minW={4}
+                    h={4}
+                    _text={{ fontSize: 'xs', color: 'white' }}
+                  >
+                    3
+                  </Badge>
+                </Box>
+                <IconButton
+                  icon={<MaterialIcons name="logout" size={24} />}
+                  onPress={signOut}
+                  variant="ghost"
+                  rounded="full"
+                  colorScheme="primary"
+                />
+              </HStack>
             </HStack>
           </Box>
 

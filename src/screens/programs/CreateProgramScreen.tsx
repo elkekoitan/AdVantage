@@ -28,9 +28,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
-import { RootStackParamList } from '../../types';
+import { MainStackParamList } from '../../navigation/MainNavigator';
 
-type CreateProgramScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateProgram'>;
+type CreateProgramScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'CreateProgram'>;
 
 interface ProgramFormData {
   title: string;

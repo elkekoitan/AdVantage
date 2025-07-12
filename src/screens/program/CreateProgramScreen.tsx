@@ -257,11 +257,11 @@ export const CreateProgramScreen = () => {
       const aiRequest = {
         user_preferences: {
           ...userPreferences,
-          interests: aiPreferences.interests,
-          activity_types: aiPreferences.activityTypes,
+          interests: aiPreferences.interests.length > 0 ? aiPreferences.interests : userPreferences.interests,
+          activity_types: aiPreferences.activityTypes.length > 0 ? aiPreferences.activityTypes : ['restoran', 'eğlence', 'alışveriş'],
         },
         date: new Date().toISOString().split('T')[0],
-        location: aiPreferences.location,
+        location: aiPreferences.location || 'İstanbul',
         budget: aiPreferences.budget,
         duration: aiPreferences.duration,
         occasion: aiPreferences.occasion,
@@ -271,6 +271,20 @@ export const CreateProgramScreen = () => {
       const suggestion = await geminiService.generateDailyProgram(aiRequest);
       
       if (suggestion) {
+        // Budget optimization if needed
+        if (suggestion.total_estimated_cost > aiPreferences.budget) {
+          // Simple budget optimization by scaling down costs proportionally
+          const scaleFactor = aiPreferences.budget / suggestion.total_estimated_cost;
+          suggestion.activities = suggestion.activities.map((activity: any) => ({
+            ...activity,
+            estimated_cost: Math.round(activity.estimated_cost * scaleFactor)
+          }));
+          suggestion.total_estimated_cost = suggestion.activities.reduce(
+            (total: number, activity: any) => total + activity.estimated_cost,
+            0
+          );
+        }
+        
         setAiSuggestions(suggestion);
         setShowAiModal(true);
       } else {
@@ -634,6 +648,34 @@ export const CreateProgramScreen = () => {
                 }}
               >
                 {interest}
+              </Checkbox>
+            ))}
+          </VStack>
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Aktivite Türleri</FormControl.Label>
+          <VStack space={2}>
+            {['Restoran', 'Kafe', 'Sinema', 'Müze', 'Park', 'Alışveriş Merkezi', 'Spor Salonu', 'Konsert'].map((activityType) => (
+              <Checkbox
+                key={activityType}
+                value={activityType}
+                isChecked={aiPreferences.activityTypes.includes(activityType)}
+                onChange={(isChecked) => {
+                  if (isChecked) {
+                    setAiPreferences({
+                      ...aiPreferences,
+                      activityTypes: [...aiPreferences.activityTypes, activityType]
+                    });
+                  } else {
+                    setAiPreferences({
+                      ...aiPreferences,
+                      activityTypes: aiPreferences.activityTypes.filter(t => t !== activityType)
+                    });
+                  }
+                }}
+              >
+                {activityType}
               </Checkbox>
             ))}
           </VStack>
