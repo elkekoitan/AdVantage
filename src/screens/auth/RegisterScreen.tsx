@@ -18,10 +18,11 @@ import {
   FormControl,
   WarningOutlineIcon,
 } from 'native-base';
-import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Platform } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
+// import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -289,6 +290,7 @@ export const RegisterScreen = () => {
               <FormControl isRequired isInvalid={!!errors.email}>
                 <FormControl.Label>E-posta</FormControl.Label>
                 <Input
+                  testID="email-input"
                   placeholder="E-posta"
                   size="lg"
                   keyboardType="email-address"
@@ -353,27 +355,48 @@ export const RegisterScreen = () => {
               {/* Date of Birth */}
               <FormControl>
                 <FormControl.Label>Doğum Tarihi (Opsiyonel)</FormControl.Label>
-                <Input
-                  placeholder="YYYY-MM-DD"
-                  size="lg"
-                  value={formData.dateOfBirth}
-                  onChangeText={(text) => updateFormData('dateOfBirth', text)}
-                  InputLeftElement={
-                    <Icon
-                      as={MaterialIcons}
-                      name="cake"
-                      size={5}
-                      ml={3}
-                      color="gray.400"
-                    />
-                  }
-                />
+                <Pressable
+                  onPress={() => {}}
+                >
+                  <Input
+                    placeholder="Doğum tarihinizi seçin"
+                    size="lg"
+                    value={formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('tr-TR') : ''}
+                    isReadOnly
+                    InputLeftElement={
+                      <Icon
+                        as={MaterialIcons}
+                        name="cake"
+                        size={5}
+                        ml={3}
+                        color="gray.400"
+                      />
+                    }
+                  />
+                </Pressable>
+                {/* Temporarily disabled DateTimePicker due to native module issue */}
+                {/* {showDatePicker && (
+                  <DateTimePicker
+                    value={formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date(2000, 0, 1)}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={new Date()}
+                    minimumDate={new Date(1900, 0, 1)}
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        updateFormData('dateOfBirth', selectedDate.toISOString().split('T')[0]);
+                      }
+                    }}
+                  />
+                )} */}
               </FormControl>
 
               {/* Password */}
               <FormControl isRequired isInvalid={!!errors.password}>
                 <FormControl.Label>Şifre</FormControl.Label>
                 <Input
+                  testID="password-input"
                   placeholder="Şifre"
                   size="lg"
                   type={showPassword ? 'text' : 'password'}
@@ -409,6 +432,7 @@ export const RegisterScreen = () => {
               <FormControl isRequired isInvalid={!!errors.confirmPassword}>
                 <FormControl.Label>Şifre Tekrar</FormControl.Label>
                 <Input
+                  testID="confirm-password-input"
                   placeholder="Şifre Tekrar"
                   size="lg"
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -448,6 +472,7 @@ export const RegisterScreen = () => {
                     isChecked={formData.acceptTerms}
                     onChange={(isChecked) => updateFormData('acceptTerms', isChecked)}
                     colorScheme="primary"
+                    testID="terms-checkbox"
                   >
                     <Text fontSize="sm" color="gray.700">
                       <Link _text={{ color: 'primary.600' }}>Kullanım Koşulları</Link> ve&nbsp;

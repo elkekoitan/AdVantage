@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -127,7 +127,7 @@ export const CompanyDetailScreen = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Mock data - In real app, this would come from Supabase
-  const mockCompany: Company = {
+  const mockCompany: Company = useMemo(() => ({
     id: companyId,
     name: 'Migros',
     description: 'Türkiye\'nin önde gelen perakende zincirlerinden biri olan Migros, 1954 yılından bu yana müşterilerine kaliteli ürünler ve hizmetler sunmaktadır. Geniş ürün yelpazesi ve uygun fiyatlarıyla ailelerin vazgeçilmez alışveriş noktasıdır.',
@@ -166,9 +166,9 @@ export const CompanyDetailScreen = () => {
       saturday: '08:00 - 22:00',
       sunday: '09:00 - 21:00',
     },
-  };
+  }), [companyId]);
 
-  const mockCampaigns: Campaign[] = [
+  const mockCampaigns: Campaign[] = useMemo(() => [
     {
       id: '1',
       title: 'Tüm Ürünlerde %30 İndirim',
@@ -205,9 +205,9 @@ export const CompanyDetailScreen = () => {
       is_active: true,
       category: 'Kişisel Bakım',
     },
-  ];
+  ], []);
 
-  const mockReviews: Review[] = [
+  const mockReviews: Review[] = useMemo(() => [
     {
       id: '1',
       user_name: 'Ahmet K.',
@@ -232,21 +232,9 @@ export const CompanyDetailScreen = () => {
       comment: 'Yıllardır müşterisiyim, hep memnun kaldım. Tavsiye ederim.',
       date: '2024-01-13',
     },
-  ];
+  ], []);
 
-  useEffect(() => {
-    loadCompanyDetails();
-  }, [companyId]);
-
-  useEffect(() => {
-    if (activeTab === 'campaigns') {
-      loadCampaigns();
-    } else if (activeTab === 'reviews') {
-      loadReviews();
-    }
-  }, [activeTab]);
-
-  const loadCompanyDetails = async () => {
+  const loadCompanyDetails = useCallback(async () => {
     try {
       setLoading(true);
       // Here we would normally fetch from Supabase
@@ -266,9 +254,9 @@ export const CompanyDetailScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, mockCompany]);
 
-  const loadCampaigns = async () => {
+  const loadCampaigns = useCallback(async () => {
     try {
       setCampaignsLoading(true);
       // Here we would normally fetch from Supabase
@@ -288,9 +276,9 @@ export const CompanyDetailScreen = () => {
     } finally {
       setCampaignsLoading(false);
     }
-  };
+  }, [toast, mockCampaigns]);
 
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     try {
       setReviewsLoading(true);
       // Here we would normally fetch from Supabase
@@ -310,7 +298,19 @@ export const CompanyDetailScreen = () => {
     } finally {
       setReviewsLoading(false);
     }
-  };
+  }, [toast, mockReviews]);
+
+  useEffect(() => {
+    loadCompanyDetails();
+  }, [loadCompanyDetails]);
+
+  useEffect(() => {
+    if (activeTab === 'campaigns') {
+      loadCampaigns();
+    } else if (activeTab === 'reviews') {
+      loadReviews();
+    }
+  }, [activeTab, loadCampaigns, loadReviews]);
 
   const handleAddReview = async () => {
     if (!reviewForm.comment.trim()) {
@@ -592,7 +592,7 @@ export const CompanyDetailScreen = () => {
               <Pressable
                 key={tab.key}
                 flex={1}
-                onPress={() => setActiveTab(tab.key as any)}
+                onPress={() => setActiveTab(tab.key as 'campaigns' | 'about' | 'reviews')}
               >
                 <Box
                   py={3}

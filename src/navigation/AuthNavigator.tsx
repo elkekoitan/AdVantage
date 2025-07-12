@@ -20,14 +20,46 @@ export const AuthNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
         animation: 'slide_from_right',
+        headerBackTitleVisible: false,
+        headerTintColor: '#2196F3',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
       }}
     >
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen 
+        name="Onboarding" 
+        component={OnboardingScreen} 
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen} 
+        options={{
+          headerTitle: 'Giriş Yap',
+        }}
+      />
+      <Stack.Screen 
+        name="Register" 
+        component={RegisterScreen} 
+        options={{
+          headerTitle: 'Kayıt Ol',
+        }}
+      />
+      <Stack.Screen 
+        name="ForgotPassword" 
+        component={ForgotPasswordScreen} 
+        options={{
+          headerTitle: 'Şifremi Unuttum',
+        }}
+      />
     </Stack.Navigator>
   );
-}; 
+};

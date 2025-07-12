@@ -1,29 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  VStack,
-  HStack,
-  Heading,
+  View,
   Text,
-  Button,
+  StyleSheet,
   ScrollView,
-  Icon,
-  Avatar,
-  Card,
-  Pressable,
-  Badge,
-  Progress,
-  useToast,
-  Skeleton,
-  Divider,
-  Center,
-} from 'native-base';
-import { MaterialIcons } from '@expo/vector-icons';
-
-import { RefreshControl } from 'react-native';
-
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
+import type { MainStackParamList, MainTabParamList } from '../../navigation/MainNavigator';
+
+// Design system
+const colors = {
+  primary: '#007AFF',
+  primaryLight: '#E3F2FD',
+  secondary: '#FF6B35',
+  background: '#F8F9FA',
+  surface: '#FFFFFF',
+  text: '#1A1A1A',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#17A2B8',
+};
+
+
 
 interface Program {
   id: string;
@@ -53,6 +64,8 @@ interface UserStats {
   current_streak: number;
 }
 
+type HomeScreenNavigationProp = BottomTabNavigationProp<MainTabParamList> & NativeStackNavigationProp<MainStackParamList>;
+
 interface SupabaseProgramData {
   id: string;
   title: string;
@@ -65,7 +78,7 @@ interface SupabaseProgramData {
 
 export const HomeScreen = () => {
   const { user, signOut } = useAuth();
-  const toast = useToast();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -141,19 +154,14 @@ export const HomeScreen = () => {
         } else if (typeof error === 'string') {
           errorMessage = error;
         }
-        toast.show({
-          title: 'Hata',
-          description: errorMessage,
-          variant: 'top-accent',
-          bgColor: 'red.500',
-        });
+        Alert.alert('Hata', errorMessage);
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     };
     fetchUserData();
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   const onRefresh = () => {
     // Burada refresh işlemi yapılabilir
@@ -188,430 +196,658 @@ export const HomeScreen = () => {
   const getRecommendationIcon = (type: string) => {
     switch (type) {
       case 'restaurant':
-        return 'restaurant';
+        return 'restaurant-outline' as const;
       case 'activity':
-        return 'local-activity';
+        return 'fitness-outline' as const;
       case 'product':
-        return 'shopping-bag';
+        return 'bag-outline' as const;
       case 'event':
-        return 'event';
+        return 'calendar-outline' as const;
       default:
-        return 'star';
+        return 'star-outline' as const;
     }
   };
 
   if (loading) {
     return (
-      <Box flex={1} bg="gray.50" safeArea>
-        <ScrollView p={4}>
-          <VStack space={4}>
-            <Skeleton h="20" rounded="md" />
-            <HStack space={4}>
-              <Skeleton flex={1} h="24" rounded="md" />
-              <Skeleton flex={1} h="24" rounded="md" />
-            </HStack>
-            <Skeleton h="40" rounded="md" />
-            <Skeleton h="32" rounded="md" />
-          </VStack>
-        </ScrollView>
-      </Box>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <Box flex={1} bg="gray.50" safeArea>
+    <SafeAreaView style={styles.container}>
       <ScrollView
+        style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* Header */}
-        <Box bg="primary.600" px={4} py={6}>
-          <HStack justifyContent="space-between" alignItems="center">
-            <HStack space={3} alignItems="center">
-              <Avatar
-                bg="white"
-                size="md"
-                source={{
-                  uri: user?.user_metadata?.avatar_url,
-                }}
-              >
-                {user?.user_metadata?.full_name?.charAt(0) || 'U'}
-              </Avatar>
-              <VStack>
-                <Text color="white" fontSize="lg" fontWeight="semibold">
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.userInfo}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {user?.user_metadata?.full_name?.charAt(0) || 'U'}
+                </Text>
+              </View>
+              <View style={styles.userDetails}>
+                <Text style={styles.welcomeText}>
                   Merhaba, {user?.user_metadata?.full_name || 'Kullanıcı'}!
                 </Text>
-                <Text color="primary.100" fontSize="sm">
+                <Text style={styles.subtitleText}>
                   Bugün hangi deneyimi yaşamak istiyorsunuz?
                 </Text>
-              </VStack>
-            </HStack>
-            <Pressable onPress={signOut}>
-              <Icon
-                as={MaterialIcons}
-                name="logout"
-                size={6}
-                color="white"
-              />
-            </Pressable>
-          </HStack>
-        </Box>
+              </View>
+            </View>
+            <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
+              <Ionicons name="log-out-outline" size={24} color={colors.surface} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        <VStack space={4} p={4}>
+        <View style={styles.content}>
           {/* Quick Actions */}
-          <Card>
-            <VStack space={4} p={4}>
-              <Heading size="md" color="gray.700">
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>
                 Hızlı İşlemler
-              </Heading>
-              <HStack space={3} justifyContent="space-around">
-                <Button
-                  flex={1}
-                  leftIcon={<Icon as={MaterialIcons} name="add" size={5} />}
-                  colorScheme="primary"
-                  onPress={() => {
-                    // Navigate to program creation
-                    toast.show({
-                      title: 'Yakında',
-                      description: 'Program oluşturma özelliği yakında gelecek!',
-                    });
-                  }}
+              </Text>
+              <View style={styles.quickActionsGrid}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('CreateProgram', {})}
+                  style={[styles.quickActionButton, { backgroundColor: colors.primary }]}
                 >
-                  Program Oluştur
-                </Button>
-                <Button
-                  flex={1}
-                  leftIcon={<Icon as={MaterialIcons} name="explore" size={5} />}
-                  variant="outline"
-                  colorScheme="primary"
-                  onPress={() => {
-                    // Navigate to explore
-                    toast.show({
-                      title: 'Yakında',
-                      description: 'Keşfet özelliği yakında gelecek!',
-                    });
-                  }}
+                  <Ionicons name="add-circle" size={32} color={colors.surface} />
+                  <Text style={styles.quickActionText}>
+                    Yeni Program
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Explore')}
+                  style={[styles.quickActionButton, { backgroundColor: colors.secondary }]}
                 >
-                  Keşfet
-                </Button>
-              </HStack>
-            </VStack>
-          </Card>
+                  <Ionicons name="compass" size={32} color={colors.surface} />
+                  <Text style={styles.quickActionText}>
+                    Keşfet
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Program')}
+                  style={[styles.quickActionButton, { backgroundColor: colors.warning }]}
+                >
+                  <Ionicons name="list" size={32} color={colors.surface} />
+                  <Text style={styles.quickActionText}>
+                    Programlarım
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Profile')}
+                  style={[styles.quickActionButton, { backgroundColor: colors.success }]}
+                >
+                  <Ionicons name="person" size={32} color={colors.surface} />
+                  <Text style={styles.quickActionText}>
+                    Profil
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
 
           {/* User Stats */}
-          <Card>
-            <VStack space={4} p={4}>
-              <Heading size="md" color="gray.700">
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>
                 İstatistiklerim
-              </Heading>
-              <HStack space={4} justifyContent="space-around">
-                <VStack alignItems="center" space={1}>
-                  <Text fontSize="2xl" fontWeight="bold" color="primary.600">
+              </Text>
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Ionicons name="albums-outline" size={24} color={colors.primary} />
+                  <Text style={[styles.statNumber, { color: colors.primary }]}>
                     {userStats.total_programs}
                   </Text>
-                  <Text fontSize="xs" color="gray.500" textAlign="center">
+                  <Text style={styles.statLabel}>
                     Toplam Program
                   </Text>
-                </VStack>
-                <VStack alignItems="center" space={1}>
-                  <Text fontSize="2xl" fontWeight="bold" color="green.600">
+                </View>
+                <View style={styles.statItem}>
+                  <Ionicons name="checkmark-done-outline" size={24} color={colors.success} />
+                  <Text style={[styles.statNumber, { color: colors.success }]}>
                     {userStats.completed_programs}
                   </Text>
-                  <Text fontSize="xs" color="gray.500" textAlign="center">
+                  <Text style={styles.statLabel}>
                     Tamamlanan
                   </Text>
-                </VStack>
-                <VStack alignItems="center" space={1}>
-                  <Text fontSize="2xl" fontWeight="bold" color="orange.600">
+                </View>
+                <View style={styles.statItem}>
+                  <Ionicons name="wallet-outline" size={24} color={colors.warning} />
+                  <Text style={[styles.statNumber, { color: colors.warning }]}>
                     ₺{userStats.total_savings.toLocaleString()}
                   </Text>
-                  <Text fontSize="xs" color="gray.500" textAlign="center">
+                  <Text style={styles.statLabel}>
                     Toplam Tasarruf
                   </Text>
-                </VStack>
-                <VStack alignItems="center" space={1}>
-                  <Text fontSize="2xl" fontWeight="bold" color="purple.600">
+                </View>
+                <View style={styles.statItem}>
+                  <Ionicons name="flame-outline" size={24} color={colors.secondary} />
+                  <Text style={[styles.statNumber, { color: colors.secondary }]}>
                     {userStats.current_streak}
                   </Text>
-                  <Text fontSize="xs" color="gray.500" textAlign="center">
+                  <Text style={styles.statLabel}>
                     Günlük Seri
                   </Text>
-                </VStack>
-              </HStack>
-            </VStack>
-          </Card>
+                </View>
+              </View>
+            </View>
+          </View>
 
           {/* Recent Programs */}
-          <Card>
-            <VStack space={4} p={4}>
-              <HStack justifyContent="space-between" alignItems="center">
-                <Heading size="md" color="gray.700">
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
                   Son Programlarım
-                </Heading>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="primary"
+                </Text>
+                <TouchableOpacity
                   onPress={() => {
-                    // Navigate to programs list
-                    toast.show({
-                      title: 'Yakında',
-                      description: 'Program listesi özelliği yakında gelecek!',
-                    });
+                    Alert.alert('Yakında', 'Tüm programlar özelliği yakında gelecek!');
                   }}
                 >
-                  Tümünü Gör
-                </Button>
-              </HStack>
+                  <Text style={styles.seeAllText}>
+                    Tümünü Gör
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               {programs.length === 0 ? (
-                <Center py={8}>
-                  <Icon
-                    as={MaterialIcons}
-                    name="event-note"
-                    size={12}
-                    color="gray.400"
-                  />
-                  <Text color="gray.500" mt={2}>
+                <View style={styles.emptyState}>
+                  <Ionicons name="document-text-outline" size={48} color={colors.textSecondary} />
+                  <Text style={styles.emptyStateText}>
                     Henüz program oluşturmadınız
                   </Text>
-                  <Button
-                    size="sm"
-                    colorScheme="primary"
-                    mt={3}
-                    onPress={() => {
-                      // Navigate to program creation
-                      toast.show({
-                        title: 'Yakında',
-                        description: 'Program oluşturma özelliği yakında gelecek!',
-                      });
-                    }}
-                  >
-                    İlk Programınızı Oluşturun
-                  </Button>
-                </Center>
+                  <Text style={styles.emptyStateSubtext}>
+                    İlk programınızı oluşturmak için yukarıdaki butonu kullanın
+                  </Text>
+                </View>
               ) : (
-                <VStack space={3}>
-                  {programs.map((program) => (
-                    <Pressable
+                <View style={styles.programsList}>
+                  {programs.slice(0, 3).map((program) => (
+                    <TouchableOpacity
                       key={program.id}
                       onPress={() => {
-                        // Navigate to program details
-                        toast.show({
-                          title: 'Yakında',
-                          description: 'Program detayları özelliği yakında gelecek!',
-                        });
+                        Alert.alert('Yakında', 'Program detayları özelliği yakında gelecek!');
                       }}
+                      style={styles.programItem}
                     >
-                      <Box
-                        bg="white"
-                        p={4}
-                        rounded="md"
-                        borderWidth={1}
-                        borderColor="gray.200"
-                      >
-                        <HStack justifyContent="space-between" alignItems="center">
-                          <VStack flex={1} space={1}>
-                            <Text fontSize="md" fontWeight="semibold">
-                              {program.title}
+                      <View style={styles.programHeader}>
+                        <View style={styles.programInfo}>
+                          <Text style={styles.programTitle}>
+                            {program.title}
+                          </Text>
+                          <Text style={styles.programDate}>
+                            {new Date(program.date).toLocaleDateString('tr-TR')}
+                          </Text>
+                          <View style={styles.programMeta}>
+                            <Text style={styles.programMetaText}>
+                              {program.activities_count} aktivite
                             </Text>
-                            <Text fontSize="sm" color="gray.500">
-                              {new Date(program.date).toLocaleDateString('tr-TR')}
+                            <Text style={styles.programMetaText}>
+                              •
                             </Text>
-                            <HStack space={2} alignItems="center">
-                              <Text fontSize="xs" color="gray.500">
-                                {program.activities_count} aktivite
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                •
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                ₺{program.total_budget?.toLocaleString() || 0} bütçe
-                              </Text>
-                            </HStack>
-                          </VStack>
-                          <Badge
-                            colorScheme={getStatusColor(program.status)}
-                            variant="solid"
-                            rounded="full"
-                          >
+                            <Text style={styles.programMetaText}>
+                              ₺{program.total_budget?.toLocaleString() || 0} bütçe
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(program.status) }]}>
+                          <Text style={styles.statusText}>
                             {getStatusText(program.status)}
-                          </Badge>
-                        </HStack>
-                        {program.total_budget > 0 && (
-                          <VStack space={1} mt={3}>
-                            <HStack justifyContent="space-between">
-                              <Text fontSize="xs" color="gray.500">
-                                Harcanan: ₺{program.spent_amount?.toLocaleString() || 0}
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                {Math.round(((program.spent_amount || 0) / program.total_budget) * 100)}%
-                              </Text>
-                            </HStack>
-                            <Progress
-                              value={(program.spent_amount || 0)}
-                              max={program.total_budget}
-                              colorScheme="primary"
-                              size="sm"
+                          </Text>
+                        </View>
+                      </View>
+                      {program.total_budget > 0 && (
+                        <View style={styles.progressSection}>
+                          <View style={styles.progressHeader}>
+                            <Text style={styles.progressText}>
+                              Harcanan: ₺{program.spent_amount?.toLocaleString() || 0}
+                            </Text>
+                            <Text style={styles.progressText}>
+                              {Math.round(((program.spent_amount || 0) / program.total_budget) * 100)}%
+                            </Text>
+                          </View>
+                          <View style={styles.progressBar}>
+                            <View 
+                              style={[
+                                styles.progressFill, 
+                                { 
+                                  width: `${Math.min(((program.spent_amount || 0) / program.total_budget) * 100, 100)}%`,
+                                  backgroundColor: colors.primary
+                                }
+                              ]} 
                             />
-                          </VStack>
-                        )}
-                      </Box>
-                    </Pressable>
+                          </View>
+                        </View>
+                      )}
+                    </TouchableOpacity>
                   ))}
-                </VStack>
+                </View>
               )}
-            </VStack>
-          </Card>
+            </View>
+          </View>
 
           {/* AI Recommendations */}
-          <Card>
-            <VStack space={4} p={4}>
-              <HStack justifyContent="space-between" alignItems="center">
-                <Heading size="md" color="gray.700">
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
                   Size Özel Öneriler
-                </Heading>
-                <Icon
-                  as={MaterialIcons}
-                  name="auto-awesome"
-                  size={6}
-                  color="primary.600"
-                />
-              </HStack>
+                </Text>
+                <Ionicons name="sparkles" size={24} color={colors.primary} />
+              </View>
 
               {recommendations.length === 0 ? (
-                <Center py={8}>
-                  <Icon
-                    as={MaterialIcons}
-                    name="lightbulb"
-                    size={12}
-                    color="gray.400"
-                  />
-                  <Text color="gray.500" mt={2} textAlign="center">
+                <View style={styles.emptyState}>
+                  <Ionicons name="bulb-outline" size={48} color={colors.textSecondary} />
+                  <Text style={styles.emptyStateText}>
                     AI önerileriniz hazırlanıyor...
                   </Text>
-                  <Text fontSize="sm" color="gray.400" mt={1} textAlign="center">
+                  <Text style={styles.emptyStateSubtext}>
                     Daha fazla program oluşturun ve kişiselleştirilmiş öneriler alın
                   </Text>
-                </Center>
+                </View>
               ) : (
-                <VStack space={3}>
+                <View style={styles.recommendationsList}>
                   {recommendations.slice(0, 3).map((recommendation) => (
-                    <Pressable
+                    <TouchableOpacity
                       key={recommendation.id}
                       onPress={() => {
-                        // Handle recommendation tap
-                        toast.show({
-                          title: 'Yakında',
-                          description: 'Öneri detayları özelliği yakında gelecek!',
-                        });
+                        Alert.alert('Yakında', 'Öneri detayları özelliği yakında gelecek!');
                       }}
+                      style={styles.recommendationItem}
                     >
-                      <Box
-                        bg="white"
-                        p={4}
-                        rounded="md"
-                        borderWidth={1}
-                        borderColor="gray.200"
-                      >
-                        <HStack space={3} alignItems="center">
-                          <Icon
-                            as={MaterialIcons}
-                            name={getRecommendationIcon(recommendation.type)}
-                            size={8}
-                            color="primary.600"
-                          />
-                          <VStack flex={1} space={1}>
-                            <Text fontSize="md" fontWeight="semibold">
-                              {recommendation.title}
-                            </Text>
-                            <Text fontSize="sm" color="gray.600">
-                              {recommendation.description}
-                            </Text>
-                            <Text fontSize="xs" color="primary.600">
-                              {recommendation.reason}
-                            </Text>
-                          </VStack>
-                          <VStack alignItems="center">
-                            <Text fontSize="xs" color="gray.500">
-                              Match
-                            </Text>
-                            <Text fontSize="sm" fontWeight="bold" color="primary.600">
-                              {Math.round(recommendation.score * 100)}%
-                            </Text>
-                          </VStack>
-                        </HStack>
-                      </Box>
-                    </Pressable>
+                      <View style={styles.recommendationContent}>
+                        <Ionicons 
+                          name={getRecommendationIcon(recommendation.type)} 
+                          size={32} 
+                          color={colors.primary} 
+                        />
+                        <View style={styles.recommendationText}>
+                          <Text style={styles.recommendationTitle}>
+                            {recommendation.title}
+                          </Text>
+                          <Text style={styles.recommendationDescription}>
+                            {recommendation.description}
+                          </Text>
+                          <Text style={styles.recommendationReason}>
+                            {recommendation.reason}
+                          </Text>
+                        </View>
+                        <View style={styles.recommendationScore}>
+                          <Text style={styles.scoreLabel}>
+                            Match
+                          </Text>
+                          <Text style={styles.scoreValue}>
+                            {Math.round(recommendation.score * 100)}%
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                   ))}
-                </VStack>
+                </View>
               )}
-            </VStack>
-          </Card>
+            </View>
+          </View>
 
           {/* Coming Soon Features */}
-          <Card>
-            <VStack space={4} p={4}>
-              <Heading size="md" color="gray.700">
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>
                 Yakında Gelecek Özellikler
-              </Heading>
-              <VStack space={3}>
-                <HStack space={3} alignItems="center">
-                  <Icon
-                    as={MaterialIcons}
-                    name="map"
-                    size={6}
-                    color="blue.600"
-                  />
-                  <VStack flex={1}>
-                    <Text fontSize="sm" fontWeight="semibold">
+              </Text>
+              <View style={styles.featuresList}>
+                <View style={styles.featureItem}>
+                  <Ionicons name="map" size={24} color={colors.info} />
+                  <View style={styles.featureText}>
+                    <Text style={styles.featureTitle}>
                       Harita Entegrasyonu
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text style={styles.featureDescription}>
                       Yakındaki mekanları keşfedin
                     </Text>
-                  </VStack>
-                </HStack>
-                <Divider />
-                <HStack space={3} alignItems="center">
-                  <Icon
-                    as={MaterialIcons}
-                    name="share"
-                    size={6}
-                    color="green.600"
-                  />
-                  <VStack flex={1}>
-                    <Text fontSize="sm" fontWeight="semibold">
+                  </View>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.featureItem}>
+                  <Ionicons name="share-social" size={24} color={colors.success} />
+                  <View style={styles.featureText}>
+                    <Text style={styles.featureTitle}>
                       Sosyal Paylaşım
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text style={styles.featureDescription}>
                       Programlarınızı sosyal medyada paylaşın
                     </Text>
-                  </VStack>
-                </HStack>
-                <Divider />
-                <HStack space={3} alignItems="center">
-                  <Icon
-                    as={MaterialIcons}
-                    name="business"
-                    size={6}
-                    color="purple.600"
-                  />
-                  <VStack flex={1}>
-                    <Text fontSize="sm" fontWeight="semibold">
+                  </View>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.featureItem}>
+                  <Ionicons name="business" size={24} color={colors.secondary} />
+                  <View style={styles.featureText}>
+                    <Text style={styles.featureTitle}>
                       İşletme Paneli
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text style={styles.featureDescription}>
                       İşletmenizi kaydedin ve müşterilerinize ulaşın
                     </Text>
-                  </VStack>
-                </HStack>
-              </VStack>
-            </VStack>
-          </Card>
-        </VStack>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
       </ScrollView>
-    </Box>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  userDetails: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.surface,
+    marginBottom: 4,
+  },
+  subtitleText: {
+    fontSize: 14,
+    color: colors.surface + '80',
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  content: {
+    padding: 16,
+    gap: 16,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    minWidth: '45%',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.surface,
+    textAlign: 'center',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    gap: 8,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary + '80',
+    textAlign: 'center',
+  },
+  programsList: {
+    gap: 12,
+  },
+  programItem: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  programHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  programInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  programTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  programDate: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  programMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  programMetaText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.surface,
+  },
+  progressSection: {
+    marginTop: 12,
+    gap: 4,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  recommendationsList: {
+    gap: 12,
+  },
+  recommendationItem: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recommendationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  recommendationText: {
+    flex: 1,
+    gap: 4,
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  recommendationDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  recommendationReason: {
+    fontSize: 12,
+    color: colors.primary,
+  },
+  recommendationScore: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  scoreValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  featuresList: {
+    gap: 16,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  featureText: {
+    flex: 1,
+    gap: 2,
+  },
+  featureTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  featureDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+});
+
+export default HomeScreen;

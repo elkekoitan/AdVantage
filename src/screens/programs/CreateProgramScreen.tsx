@@ -28,8 +28,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
+import { RootStackParamList } from '../../types';
 
-type CreateProgramScreenNavigationProp = NativeStackNavigationProp<any, 'CreateProgram'>;
+type CreateProgramScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateProgram'>;
 
 interface ProgramFormData {
   title: string;
@@ -145,7 +146,7 @@ export const CreateProgramScreen = () => {
     try {
       // Simulate AI recommendation generation
       // In real implementation, this would call Google Gemini API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise<void>((resolve) => setTimeout(resolve, 2000));
 
       const mockRecommendations: AIRecommendation[] = [
         {
@@ -296,7 +297,7 @@ export const CreateProgramScreen = () => {
     }
   };
 
-  const updateFormData = (key: keyof ProgramFormData, value: any) => {
+  const updateFormData = (key: keyof ProgramFormData, value: unknown) => {
     setFormData(prev => ({ ...prev, [key]: value }));
     if (errors[key as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [key]: undefined }));

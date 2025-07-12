@@ -7,8 +7,8 @@ interface CustomButtonProps extends Omit<IButtonProps, 'leftIcon' | 'rightIcon'>
   variant?: 'solid' | 'outline' | 'ghost' | 'link';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   colorScheme?: string;
-  leftIcon?: string;
-  rightIcon?: string;
+  leftIcon?: keyof typeof MaterialIcons.glyphMap;
+  rightIcon?: keyof typeof MaterialIcons.glyphMap;
   isLoading?: boolean;
   isDisabled?: boolean;
 }
@@ -33,12 +33,12 @@ export const Button: React.FC<CustomButtonProps> = ({
       isDisabled={isDisabled}
       leftIcon={
         leftIcon ? (
-          <MaterialIcons name={leftIcon as any} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
+          <MaterialIcons name={leftIcon} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
         ) : undefined
       }
       rightIcon={
         rightIcon ? (
-          <MaterialIcons name={rightIcon as any} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
+          <MaterialIcons name={rightIcon} size={size === 'xs' ? 12 : size === 'sm' ? 14 : size === 'md' ? 16 : 18} />
         ) : undefined
       }
       _text={{

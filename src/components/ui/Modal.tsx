@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
   Modal as NBModal,
   IModalProps,
@@ -110,6 +111,18 @@ const Modal: React.FC<CustomModalProps> & {
 Modal.Header = ModalHeader;
 Modal.Body = ModalBody;
 Modal.Footer = ModalFooter;
+
+Modal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  size: PropTypes.oneOf(['xs', 'sm', 'md', 'lg', 'xl', 'full']),
+  children: PropTypes.any.isRequired,
+};
+
+Modal.defaultProps = {
+  size: 'md',
+};
 
 export { Modal };
 

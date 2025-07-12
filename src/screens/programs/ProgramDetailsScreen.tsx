@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -31,8 +31,9 @@ import { RefreshControl } from 'react-native';
 
 // Remove unused import
 import { supabase } from '../../services/supabase';
+import { RootStackParamList } from '../../types';
 
-type ProgramDetailsScreenNavigationProp = NativeStackNavigationProp<any, 'ProgramDetails'>;
+type ProgramDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProgramDetail'>;
 type ProgramDetailsScreenRouteProp = RouteProp<{ ProgramDetails: { programId: string } }, 'ProgramDetails'>;
 
 interface Program {
@@ -47,7 +48,7 @@ interface Program {
   category: string;
   location: string;
   participants_count: number;
-  preferences: any;
+  preferences: Record<string, unknown>;
   ai_generated: boolean;
   status: 'draft' | 'active' | 'completed' | 'cancelled';
   created_at: string;
@@ -128,11 +129,7 @@ export const ProgramDetailsScreen = () => {
     { label: 'Diğer', value: 'other' },
   ];
 
-  useEffect(() => {
-    fetchProgramDetails();
-  }, [programId]);
-
-  const fetchProgramDetails = async () => {
+  const fetchProgramDetails = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -184,7 +181,11 @@ export const ProgramDetailsScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [programId, toast]);
+
+  useEffect(() => {
+    fetchProgramDetails();
+  }, [programId, fetchProgramDetails]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -202,7 +203,7 @@ export const ProgramDetailsScreen = () => {
 
       if (error) throw error;
 
-      setProgram(prev => prev ? { ...prev, status: newStatus as any } : null);
+      setProgram(prev => prev ? { ...prev, status: newStatus as Program['status'] } : null);
       toast.show({
         title: 'Başarılı',
         description: 'Program durumu güncellendi.',
@@ -234,7 +235,7 @@ export const ProgramDetailsScreen = () => {
 
       setActivities(prev => prev.map(activity => 
         activity.id === activityId 
-          ? { ...activity, status: newStatus as any }
+          ? { ...activity, status: newStatus as ProgramActivity['status'] }
           : activity
       ));
 
@@ -327,7 +328,7 @@ export const ProgramDetailsScreen = () => {
         ...prev,
         title: editForm.title,
         description: editForm.description,
-        status: editForm.status as any,
+        status: editForm.status as Program['status'],
       } : null);
       onEditClose();
 
@@ -584,7 +585,7 @@ export const ProgramDetailsScreen = () => {
               <Pressable
                 key={tab.key}
                 flex={1}
-                onPress={() => setSelectedTab(tab.key as any)}
+                onPress={() => setSelectedTab(tab.key as 'overview' | 'activities' | 'expenses')}
               >
                 <Box
                   bg={selectedTab === tab.key ? 'primary.500' : 'transparent'}

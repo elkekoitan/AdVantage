@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -78,13 +78,7 @@ export const ProgramScreen = () => {
     { label: 'Diğer', value: 'other' },
   ];
 
-  useEffect(() => {
-    if (user) {
-      fetchPrograms();
-    }
-  }, [user, selectedTab]);
-
-  const fetchPrograms = async () => {
+  const fetchPrograms = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -162,7 +156,13 @@ export const ProgramScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user, selectedTab, toast]);
+
+  useEffect(() => {
+    if (user) {
+      fetchPrograms();
+    }
+  }, [user, fetchPrograms]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -300,7 +300,7 @@ export const ProgramScreen = () => {
               ].map((tab) => (
                 <Pressable
                   key={tab.key}
-                  onPress={() => setSelectedTab(tab.key as any)}
+                  onPress={() => setSelectedTab(tab.key as 'all' | 'active' | 'completed')}
                   flex={1}
                 >
                   <Box

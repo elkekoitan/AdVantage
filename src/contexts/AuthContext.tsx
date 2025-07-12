@@ -110,23 +110,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: 'exp://localhost:8081/--/auth/callback',
-      },
-    });
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'advantage://auth/callback',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      throw new Error('Google ile giriş yapılamadı. Lütfen tekrar deneyin.');
+    }
   };
 
   const signInWithApple = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: {
-        redirectTo: 'exp://localhost:8081/--/auth/callback',
-      },
-    });
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: 'advantage://auth/callback',
+        },
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Apple sign in error:', error);
+      throw new Error('Apple ile giriş yapılamadı. Lütfen tekrar deneyin.');
+    }
   };
 
   const value = {

@@ -1,14 +1,24 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Icon } from 'native-base';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+// Define PlaceResult type locally until googleMapsService is implemented
+type PlaceResult = {
+  id: string;
+  name: string;
+  address: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+};
 
 // Import main screens
 import { HomeScreen } from '../screens/main/HomeScreen';
-import { ExploreScreen } from '../screens/main/ExploreScreen';
+import ExploreScreen from '../screens/main/ExploreScreen';
 import { ProgramScreen } from '../screens/main/ProgramScreen';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
+import MapScreen from '../screens/main/MapScreen';
 
 // Import stack screens
 import { ProgramDetailsScreen } from '../screens/programs/ProgramDetailsScreen';
@@ -30,6 +40,11 @@ export type MainStackParamList = {
   CreateProgram: { date?: string };
   CompanyDetails: { companyId: string };
   CampaignDetails: { campaignId: string };
+  Map: { 
+    initialLocation?: { latitude: number; longitude: number };
+    searchQuery?: string;
+    places?: PlaceResult[];
+  };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -59,7 +74,7 @@ const MainTabs = () => {
         options={{
           tabBarLabel: 'Ana Sayfa',
           tabBarIcon: ({ color, size }) => (
-            <Icon as={MaterialIcons} name="home" size={size} color={color} />
+            <MaterialIcons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -69,7 +84,7 @@ const MainTabs = () => {
         options={{
           tabBarLabel: 'Keşfet',
           tabBarIcon: ({ color, size }) => (
-            <Icon as={MaterialIcons} name="explore" size={size} color={color} />
+            <MaterialIcons name="explore" size={size} color={color} />
           ),
         }}
       />
@@ -79,7 +94,7 @@ const MainTabs = () => {
         options={{
           tabBarLabel: 'Programım',
           tabBarIcon: ({ color, size }) => (
-            <Icon as={MaterialCommunityIcons} name="calendar-clock" size={size} color={color} />
+            <MaterialCommunityIcons name="calendar-clock" size={size} color={color} />
           ),
         }}
       />
@@ -89,7 +104,7 @@ const MainTabs = () => {
         options={{
           tabBarLabel: 'Profil',
           tabBarIcon: ({ color, size }) => (
-            <Icon as={MaterialIcons} name="person" size={size} color={color} />
+            <MaterialIcons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -101,15 +116,30 @@ export const MainNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerBackTitleVisible: false,
+        headerTintColor: '#2196F3',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
       }}
     >
-      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen 
+        name="MainTabs" 
+        component={MainTabs} 
+        options={{
+          headerShown: false,
+        }}
+      />
       <Stack.Screen
         name="ProgramDetails"
         component={ProgramDetailsScreen}
         options={{
           animation: 'slide_from_right',
+          headerTitle: 'Program Detayları',
         }}
       />
       <Stack.Screen
@@ -118,6 +148,7 @@ export const MainNavigator = () => {
         options={{
           animation: 'slide_from_bottom',
           presentation: 'modal',
+          headerTitle: 'Yeni Program',
         }}
       />
       <Stack.Screen
@@ -125,6 +156,7 @@ export const MainNavigator = () => {
         component={CompanyDetailsScreen}
         options={{
           animation: 'slide_from_right',
+          headerTitle: 'Şirket Detayları',
         }}
       />
       <Stack.Screen
@@ -132,8 +164,19 @@ export const MainNavigator = () => {
         component={CampaignDetailsScreen}
         options={{
           animation: 'slide_from_right',
+          headerTitle: 'Kampanya Detayları',
+        }}
+      />
+      <Stack.Screen
+        name="Map"
+        component={MapScreen}
+        options={{
+          animation: 'slide_from_right',
+          headerShown: true,
+          headerTitle: 'Harita',
+          headerBackTitleVisible: false,
         }}
       />
     </Stack.Navigator>
   );
-}; 
+};

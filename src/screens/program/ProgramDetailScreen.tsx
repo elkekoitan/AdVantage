@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -21,11 +21,16 @@ import {
   useDisclose,
   Card,
   AlertDialog,
+  Spinner,
+  TextArea,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../../contexts/AuthContext';
+import { geminiService } from '../../services/gemini';
+import { supabase } from '../../services/supabase';
 
 type RootStackParamList = {
   ProgramDetail: { programId: string };
@@ -63,14 +68,19 @@ export const ProgramDetailScreen = () => {
   const route = useRoute<ProgramDetailRouteProp>();
   const navigation = useNavigation<ProgramDetailNavigationProp>();
   const toast = useToast();
+  const { user } = useAuth();
   const { isOpen: isAddActivityOpen, onOpen: onAddActivityOpen, onClose: onAddActivityClose } = useDisclose();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclose();
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclose();
+  const { isOpen: isAiSuggestionsOpen, onOpen: onAiSuggestionsOpen, onClose: onAiSuggestionsClose } = useDisclose();
   const cancelRef = useRef(null);
 
   const [program, setProgram] = useState<Program | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
   // Add Activity Form State
   const [activityForm, setActivityForm] = useState({
@@ -78,81 +88,66 @@ export const ProgramDetailScreen = () => {
     description: '',
     category: '',
     target_amount: '',
-    due_date: '',
+    due_date: new Date().toISOString().split('T')[0],
   });
+
+  // Edit Program Form State
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    total_budget: '',
+    end_date: '',
+  });
+
+  // Expense tracking state
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   const { programId } = route.params;
 
-  useEffect(() => {
-    if (programId) {
-      fetchProgram();
-    }
-  }, [programId]);
-
-  const fetchProgram = async () => {
+  const fetchProgram = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Mock program data for now
-      const mockProgram: Program = {
-        id: programId,
-        title: 'Aylık Market Alışverişi',
-        description: 'Aylık market harcamalarımı optimize etmek ve tasarruf etmek için oluşturduğum program.',
-        total_budget: 1500,
-        spent_amount: 850,
-        start_date: '2024-03-01',
-        end_date: '2024-03-31',
-        status: 'active',
-        created_at: '2024-03-01T10:00:00Z',
-        activities: [
-          {
-            id: '1',
-            title: 'Haftalık Market',
-            description: 'Temel gıda maddeleri alışverişi',
-            category: 'Gıda',
-            target_amount: 400,
-            spent_amount: 380,
-            due_date: '2024-03-08',
-            status: 'completed',
-            created_at: '2024-03-01T10:00:00Z',
-          },
-          {
-            id: '2',
-            title: 'Temizlik Malzemeleri',
-            description: 'Ev temizlik ürünleri',
-            category: 'Temizlik',
-            target_amount: 200,
-            spent_amount: 180,
-            due_date: '2024-03-15',
-            status: 'completed',
-            created_at: '2024-03-05T14:00:00Z',
-          },
-          {
-            id: '3',
-            title: 'Kişisel Bakım',
-            description: 'Şampuan, sabun, diş macunu vb.',
-            category: 'Kişisel Bakım',
-            target_amount: 150,
-            spent_amount: 120,
-            due_date: '2024-03-20',
-            status: 'pending',
-            created_at: '2024-03-10T09:00:00Z',
-          },
-          {
-            id: '4',
-            title: 'Atıştırmalık',
-            description: 'Çay, kahve, bisküvi, çikolata',
-            category: 'Atıştırmalık',
-            target_amount: 100,
-            spent_amount: 0,
-            due_date: '2024-03-25',
-            status: 'pending',
-            created_at: '2024-03-12T16:00:00Z',
-          },
-        ],
-      };
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı.');
+      }
 
-      setProgram(mockProgram);
+      // Fetch program with activities
+      const { data: programData, error: programError } = await supabase
+        .from('programs')
+        .select(`
+          *,
+          activities (
+            id,
+            title,
+            description,
+            category,
+            target_amount,
+            spent_amount,
+            status,
+            due_date,
+            created_at
+          )
+        `)
+        .eq('id', programId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (programError) {
+        if (programError.code === 'PGRST116') {
+          throw new Error('Program bulunamadı.');
+        }
+        throw programError;
+      }
+
+      if (!programData) {
+        throw new Error('Program bulunamadı.');
+      }
+
+      setProgram(programData as Program);
     } catch (error: unknown) {
       let errorMessage = 'Program yüklenirken bir hata oluştu.';
       if (error instanceof Error) {
@@ -168,7 +163,13 @@ export const ProgramDetailScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [programId, toast, user]);
+
+  useEffect(() => {
+    if (programId) {
+      fetchProgram();
+    }
+  }, [programId, fetchProgram]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -189,7 +190,27 @@ export const ProgramDetailScreen = () => {
     try {
       setUpdating(true);
 
-      // Here we would normally add the activity to Supabase
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı.');
+      }
+
+      const { error } = await supabase
+        .from('activities')
+        .insert({
+          title: activityForm.title,
+          description: activityForm.description,
+          category: activityForm.category,
+          target_amount: parseFloat(activityForm.target_amount),
+          spent_amount: 0,
+          status: 'pending',
+          due_date: activityForm.due_date,
+          program_id: programId,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
       toast.show({
         title: 'Başarılı',
         description: 'Aktivite başarıyla eklendi!',
@@ -202,7 +223,7 @@ export const ProgramDetailScreen = () => {
         description: '',
         category: '',
         target_amount: '',
-        due_date: '',
+        due_date: new Date().toISOString().split('T')[0],
       });
       onAddActivityClose();
       fetchProgram();
@@ -224,7 +245,24 @@ export const ProgramDetailScreen = () => {
 
   const handleDeleteProgram = async () => {
     try {
-      // Here we would normally delete the program from Supabase
+      if (!user) {
+        toast.show({
+          title: 'Hata',
+          description: 'Kullanıcı oturumu bulunamadı.',
+          variant: 'top-accent',
+          bgColor: 'red.500',
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('programs')
+        .delete()
+        .eq('id', programId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
       toast.show({
         title: 'Başarılı',
         description: 'Program başarıyla silindi!',
@@ -245,6 +283,199 @@ export const ProgramDetailScreen = () => {
       });
     }
     onDeleteClose();
+  };
+
+  const handleEditProgram = async () => {
+    if (!editForm.title.trim() || !editForm.total_budget) {
+      toast.show({
+        title: 'Eksik Bilgi',
+        description: 'Başlık ve bütçe alanları zorunludur.',
+        variant: 'top-accent',
+        bgColor: 'orange.500',
+      });
+      return;
+    }
+
+    try {
+      setUpdating(true);
+
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı.');
+      }
+
+      const { error } = await supabase
+        .from('programs')
+        .update({
+          title: editForm.title,
+          description: editForm.description,
+          total_budget: parseFloat(editForm.total_budget),
+          end_date: editForm.end_date,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', programId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.show({
+        title: 'Başarılı',
+        description: 'Program başarıyla güncellendi!',
+        variant: 'top-accent',
+        bgColor: 'green.500',
+      });
+
+      onEditClose();
+      fetchProgram();
+    } catch (error: unknown) {
+      let errorMessage = 'Program güncellenirken bir hata oluştu.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Hata',
+        description: errorMessage,
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleAddExpense = async () => {
+    if (!selectedActivity || !expenseAmount) {
+      toast.show({
+        title: 'Eksik Bilgi',
+        description: 'Tutar alanı zorunludur.',
+        variant: 'top-accent',
+        bgColor: 'orange.500',
+      });
+      return;
+    }
+
+    try {
+      setUpdating(true);
+
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı.');
+      }
+
+      const amount = parseFloat(expenseAmount);
+      const newSpentAmount = selectedActivity.spent_amount + amount;
+
+      const { error } = await supabase
+        .from('activities')
+        .update({
+          spent_amount: newSpentAmount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedActivity.id);
+
+      if (error) throw error;
+
+      // Also create an expense record
+      const { error: expenseError } = await supabase
+        .from('expenses')
+        .insert({
+          activity_id: selectedActivity.id,
+          amount: amount,
+          description: expenseDescription,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+        });
+
+      if (expenseError) throw expenseError;
+
+      toast.show({
+        title: 'Başarılı',
+        description: 'Harcama başarıyla eklendi!',
+        variant: 'top-accent',
+        bgColor: 'green.500',
+      });
+
+      setShowExpenseModal(false);
+      setExpenseAmount('');
+      setExpenseDescription('');
+      setSelectedActivity(null);
+      fetchProgram();
+    } catch (error: unknown) {
+      let errorMessage = 'Harcama eklenirken bir hata oluştu.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Hata',
+        description: errorMessage,
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleGetAiSuggestions = async () => {
+    if (!program || !user) {
+      toast.show({
+        title: 'Hata',
+        description: 'Program bilgileri bulunamadı.',
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+
+      const userPreferences = {
+        budget: program.total_budget - program.spent_amount,
+        interests: ['Tasarruf', 'Bütçe Yönetimi'],
+        location: { lat: 41.0082, lng: 28.9784 }, // İstanbul coordinates
+        previousActivities: program.activities.map(a => a.category),
+      };
+
+      const suggestions = await geminiService.generatePersonalizedRecommendations({
+        type: 'program',
+        user_preferences: userPreferences,
+        context: 'Program optimization suggestions',
+        location: typeof userPreferences.location === 'object' ? `${userPreferences.location.lat},${userPreferences.location.lng}` : userPreferences.location || 'İstanbul',
+        budget: userPreferences.budget,
+      });
+
+      setAiSuggestions(suggestions || []);
+      onAiSuggestionsOpen();
+    } catch (error: unknown) {
+      let errorMessage = 'AI önerileri alınırken bir hata oluştu.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.show({
+        title: 'Hata',
+        description: errorMessage,
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const openEditModal = () => {
+    if (program) {
+      setEditForm({
+        title: program.title,
+        description: program.description,
+        total_budget: program.total_budget.toString(),
+        end_date: program.end_date,
+      });
+      onEditOpen();
+    }
+  };
+
+  const openExpenseModal = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setShowExpenseModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -280,6 +511,161 @@ export const ProgramDetailScreen = () => {
         return 'Bilinmiyor';
     }
   };
+
+  const renderEditModal = () => (
+    <Modal isOpen={isEditOpen} onClose={onEditClose} size="lg">
+      <Modal.Content>
+        <Modal.CloseButton />
+        <Modal.Header>Program Düzenle</Modal.Header>
+        <Modal.Body>
+          <VStack space={4}>
+            <FormControl>
+              <FormControl.Label>Program Başlığı</FormControl.Label>
+              <Input
+                value={editForm.title}
+                onChangeText={(text) => setEditForm({ ...editForm, title: text })}
+                placeholder="Program başlığını girin"
+              />
+            </FormControl>
+            <FormControl>
+              <FormControl.Label>Açıklama</FormControl.Label>
+              <TextArea
+                value={editForm.description}
+                onChangeText={(text) => setEditForm({ ...editForm, description: text })}
+                placeholder="Program açıklamasını girin"
+                h={20}
+                autoCompleteType="off"
+              />
+            </FormControl>
+            <FormControl>
+              <FormControl.Label>Toplam Bütçe (₺)</FormControl.Label>
+              <Input
+                value={editForm.total_budget}
+                onChangeText={(text) => setEditForm({ ...editForm, total_budget: text })}
+                placeholder="Toplam bütçeyi girin"
+                keyboardType="numeric"
+              />
+            </FormControl>
+            <FormControl>
+              <FormControl.Label>Bitiş Tarihi</FormControl.Label>
+              <Input
+                value={editForm.end_date}
+                onChangeText={(text) => setEditForm({ ...editForm, end_date: text })}
+                placeholder="YYYY-MM-DD"
+              />
+            </FormControl>
+          </VStack>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button.Group space={2}>
+            <Button variant="ghost" colorScheme="blueGray" onPress={onEditClose}>
+              İptal
+            </Button>
+            <Button onPress={handleEditProgram} isLoading={updating}>
+              Güncelle
+            </Button>
+          </Button.Group>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
+  );
+
+  const renderExpenseModal = () => (
+    <Modal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} size="lg">
+      <Modal.Content>
+        <Modal.CloseButton />
+        <Modal.Header>Harcama Ekle</Modal.Header>
+        <Modal.Body>
+          <VStack space={4}>
+            <Text fontSize="md" fontWeight="medium">
+              {selectedActivity?.title} - Harcama Ekle
+            </Text>
+            <FormControl>
+              <FormControl.Label>Tutar (₺)</FormControl.Label>
+              <Input
+                value={expenseAmount}
+                onChangeText={setExpenseAmount}
+                placeholder="Harcama tutarını girin"
+                keyboardType="numeric"
+              />
+            </FormControl>
+            <FormControl>
+              <FormControl.Label>Açıklama (Opsiyonel)</FormControl.Label>
+              <TextArea
+              value={expenseDescription}
+              onChangeText={setExpenseDescription}
+              placeholder="Harcama açıklamasını girin"
+              h={16}
+              autoCompleteType="off"
+            />
+            </FormControl>
+          </VStack>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button.Group space={2}>
+            <Button variant="ghost" colorScheme="blueGray" onPress={() => setShowExpenseModal(false)}>
+              İptal
+            </Button>
+            <Button onPress={handleAddExpense} isLoading={updating}>
+              Harcama Ekle
+            </Button>
+          </Button.Group>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
+  );
+
+  const renderAiSuggestionsModal = () => (
+    <Modal isOpen={isAiSuggestionsOpen} onClose={onAiSuggestionsClose} size="lg">
+      <Modal.Content>
+        <Modal.CloseButton />
+        <Modal.Header>AI Önerileri</Modal.Header>
+        <Modal.Body>
+          {aiLoading ? (
+            <HStack space={3} justifyContent="center" alignItems="center" py={8}>
+              <Spinner size="lg" color="blue.500" />
+              <Text fontSize="md" color="gray.600">
+                AI önerileri hazırlanıyor...
+              </Text>
+            </HStack>
+          ) : (
+            <ScrollView maxH={400}>
+              <VStack space={4}>
+                {aiSuggestions.map((suggestion, index) => (
+                  <Box key={index} p={4} bg="gray.50" rounded="lg">
+                    <Text fontSize="md" fontWeight="bold" mb={2}>
+                      {suggestion.title}
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" mb={2}>
+                      {suggestion.description}
+                    </Text>
+                    <HStack justifyContent="space-between" alignItems="center">
+                      <Text fontSize="sm" color="blue.600">
+                        Tahmini: ₺{suggestion.estimatedCost}
+                      </Text>
+                      <Text fontSize="sm" color="green.600">
+                        Tasarruf: ₺{suggestion.potentialSavings}
+                      </Text>
+                    </HStack>
+                  </Box>
+                ))}
+                {aiSuggestions.length === 0 && (
+                  <Text textAlign="center" color="gray.500">
+                    Henüz öneri bulunamadı.
+                  </Text>
+                )}
+              </VStack>
+            </ScrollView>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="ghost" onPress={onAiSuggestionsClose}>
+            Kapat
+          </Button>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
+  );
 
   if (loading) {
     return (
@@ -332,15 +718,36 @@ export const ProgramDetailScreen = () => {
                   </Text>
                 </HStack>
               </VStack>
-              <Button
-                size="sm"
-                variant="ghost"
-                colorScheme="red"
-                leftIcon={<Icon as={MaterialIcons} name="delete" size={4} />}
-                onPress={onDeleteOpen}
-              >
-                Sil
-              </Button>
+              <HStack space={2}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="blue"
+                  leftIcon={<Icon as={MaterialIcons} name="edit" size={4} />}
+                  onPress={openEditModal}
+                >
+                  Düzenle
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="green"
+                  leftIcon={<Icon as={MaterialIcons} name="lightbulb" size={4} />}
+                  onPress={handleGetAiSuggestions}
+                  isLoading={aiLoading}
+                >
+                  AI Önerileri
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="red"
+                  leftIcon={<Icon as={MaterialIcons} name="delete" size={4} />}
+                  onPress={onDeleteOpen}
+                >
+                  Sil
+                </Button>
+              </HStack>
             </HStack>
           </VStack>
         </Box>
@@ -452,6 +859,14 @@ export const ProgramDetailScreen = () => {
                     </VStack>
 
                     <HStack space={2} justifyContent="flex-end">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        leftIcon={<Icon as={MaterialIcons} name="add" size={3} />}
+                        onPress={() => openExpenseModal(activity)}
+                      >
+                        Harcama Ekle
+                      </Button>
                       <Button
                         size="xs"
                         variant="outline"
@@ -575,6 +990,15 @@ export const ProgramDetailScreen = () => {
           </Modal.Footer>
         </Modal.Content>
       </Modal>
+
+      {/* Edit Program Modal */}
+      {renderEditModal()}
+
+      {/* Expense Modal */}
+      {renderExpenseModal()}
+
+      {/* AI Suggestions Modal */}
+      {renderAiSuggestionsModal()}
 
       {/* Delete Confirmation */}
       <AlertDialog

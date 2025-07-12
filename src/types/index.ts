@@ -184,7 +184,7 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error' | 'campaign' | 'achievement' | 'reminder';
   read: boolean;
   action_url?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -376,6 +376,191 @@ export interface ThemeColors {
     700: string;
     800: string;
     900: string;
+  };
+}
+
+// OpenRouteService Types
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface MatrixResponse {
+  durations?: number[][];
+  distances?: number[][];
+  sources: Array<{
+    location: [number, number];
+    snapped_distance?: number;
+  }>;
+  destinations: Array<{
+    location: [number, number];
+    snapped_distance?: number;
+  }>;
+}
+
+export interface POIResponse {
+  features: Array<{
+    geometry: {
+      coordinates: [number, number];
+      type: string;
+    };
+    properties: {
+      id: string;
+      gid: string;
+      layer: string;
+      source: string;
+      source_id: string;
+      name: string;
+      confidence: number;
+      match_type: string;
+      accuracy: string;
+      country: string;
+      country_gid: string;
+      country_a: string;
+      region: string;
+      region_gid: string;
+      locality: string;
+      locality_gid: string;
+      label: string;
+    };
+    type: string;
+  }>;
+  geocoding: {
+    version: string;
+    attribution: string;
+    query: Record<string, unknown>;
+    engine: {
+      name: string;
+      author: string;
+      version: string;
+    };
+    timestamp: number;
+  };
+  type: string;
+  bbox: [number, number, number, number];
+}
+
+export interface OptimizationResponse {
+  code: number;
+  summary: {
+    cost: number;
+    routes: number;
+    unassigned: number;
+    setup: number;
+    service: number;
+    duration: number;
+    waiting_time: number;
+    priority: number;
+    delivery: number[];
+    pickup: number[];
+    distance: number;
+  };
+  unassigned: unknown[];
+  routes: Array<{
+    vehicle: number;
+    cost: number;
+    delivery: number[];
+    pickup: number[];
+    setup: number;
+    service: number;
+    duration: number;
+    waiting_time: number;
+    priority: number;
+    distance: number;
+    steps: Array<{
+      type: string;
+      location: [number, number];
+      id?: number;
+      setup?: number;
+      service?: number;
+      waiting_time?: number;
+      job?: number;
+      load?: number[];
+      arrival?: number;
+      duration?: number;
+      distance?: number;
+    }>;
+    geometry?: string;
+  }>;
+}
+
+export interface ElevationResponse {
+  geometry: {
+    coordinates: Array<[number, number, number]>;
+    type: string;
+  };
+  type: string;
+}
+
+export interface GeocodingResponse {
+  features: Array<{
+    geometry: {
+      coordinates: [number, number];
+      type: string;
+    };
+    properties: {
+      id: string;
+      gid: string;
+      layer: string;
+      source: string;
+      source_id: string;
+      name: string;
+      housenumber?: string;
+      street?: string;
+      confidence: number;
+      match_type: string;
+      accuracy: string;
+      country: string;
+      country_gid: string;
+      country_a: string;
+      region: string;
+      region_gid: string;
+      locality: string;
+      locality_gid: string;
+      label: string;
+    };
+    type: string;
+  }>;
+  geocoding: {
+    version: string;
+    attribution: string;
+    query: Record<string, unknown>;
+    engine: {
+      name: string;
+      author: string;
+      version: string;
+    };
+    timestamp: number;
+  };
+  type: string;
+  bbox: [number, number, number, number];
+}
+
+export interface IsochroneResponse {
+  features: Array<{
+    geometry: {
+      coordinates: number[][][];
+      type: string;
+    };
+    properties: {
+      group_index: number;
+      value: number;
+      center: [number, number];
+    };
+    type: string;
+  }>;
+  type: string;
+  bbox: [number, number, number, number];
+  metadata: {
+    attribution: string;
+    service: string;
+    timestamp: number;
+    query: Record<string, unknown>;
+    engine: {
+      version: string;
+      build_date: string;
+      graph_date: string;
+    };
   };
 }
 

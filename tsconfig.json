@@ -36,9 +36,11 @@
     "alwaysStrict": true,
     "baseUrl": ".",
     "types": [
-      "react",
-      "react-native",
-      "jest"
+      "react"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "./types.d.ts"
     ],
     "paths": {
       "@/*": [
@@ -77,7 +79,8 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.js",
-    "**/*.jsx"
+    "**/*.jsx",
+    "types.d.ts"
   ],
   "exclude": [
     "node_modules",

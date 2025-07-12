@@ -9,7 +9,7 @@
 - **AI/ML**: Google Gemini API, TensorFlow.js, Hugging Face
 - **Cloud**: Oracle Cloud/Google Cloud free tier with Coolify
 - **CI/CD**: GitHub Actions, Automated deployment
-- **APIs**: Google Maps, Social Media APIs, Payment gateways
+- **APIs**: OpenRoute Service, Social Media APIs, Payment gateways
 
 ## Phase 1: Foundation & MVP (Weeks 1-8)
 
@@ -45,7 +45,7 @@
   - Location-based recommendations
   - Time-based activity scheduling
   - Budget optimization algorithm
-- [ ] **Google Maps Integration**
+- [ ] **OpenRoute Service Integration**
   - Location search and selection
   - Route optimization
   - Real-time navigation
@@ -317,4 +317,4 @@ This roadmap provides a comprehensive guide for developing AdVantage from concep
 ---
 
 *Last Updated: January 2025*
-*Version: 1.0* 
+*Version: 1.0*

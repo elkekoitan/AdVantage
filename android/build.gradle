@@ -15,7 +15,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath('com.android.tools.build:gradle:8.1.1')
+        classpath('com.android.tools.build:gradle')
         classpath('com.facebook.react:react-native-gradle-plugin')
     }
 }
@@ -32,11 +32,9 @@ allprojects {
             // Android JSC is installed from npm
             url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
         }
-        
+
         google()
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
-        maven { url 'https://maven.google.com' }
-        maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
     }
 }

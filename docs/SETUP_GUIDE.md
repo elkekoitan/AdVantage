@@ -9,6 +9,7 @@ This guide will help you set up and run the AdVantage project locally.
 - Expo CLI (`npm install -g expo-cli`)
 - Supabase account (free tier)
 - Google Cloud account (for Gemini API)
+- OpenRouteService account (for maps and routing)
 
 ## Step 1: Install Dependencies
 
@@ -34,7 +35,7 @@ EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Google APIs
-EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+EXPO_PUBLIC_OPENROUTE_API_KEY=your_openroute_service_api_key
 EXPO_PUBLIC_GOOGLE_GEMINI_API_KEY=your_google_gemini_api_key
 ```
 
@@ -57,13 +58,20 @@ supabase db push
 
 Or manually run the SQL in `supabase/migrations/001_initial_schema.sql` in the Supabase SQL editor.
 
-## Step 5: Get Google Gemini API Key
+## Step 5: Get OpenRouteService API Key
+
+1. Go to [OpenRouteService](https://openrouteservice.org/dev/#/signup)
+2. Sign up for a free account
+3. Create a new API key
+4. Add it to your `.env` file
+
+## Step 6: Get Google Gemini API Key
 
 1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
 3. Add it to your `.env` file
 
-## Step 6: Start the Development Server
+## Step 7: Start the Development Server
 
 ```bash
 npm start
@@ -124,4 +132,4 @@ expo build:ios
 For issues or questions:
 - Check the [README.md](README.md)
 - Review the [PRD](AdVantage_PRD.md)
-- Check Expo and Supabase documentation 
+- Check Expo and Supabase documentation

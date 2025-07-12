@@ -75,10 +75,10 @@ npx expo run:android
 `.env.local` dosyası oluşturun:
 
 ```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-GOOGLE_MAPS_API_KEY=your_google_maps_key
-GEMINI_API_KEY=your_gemini_api_key
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_OPENROUTE_API_KEY=your_openroute_service_key
+EXPO_PUBLIC_GOOGLE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ## 📁 Proje Yapısı
@@ -164,4 +164,4 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 
 <div align="center">
   Made with ❤️ by AdVantage Team
-</div> 
+</div>

@@ -88,7 +88,7 @@ export const Badge: React.FC<CustomBadgeProps> = ({
 
   return (
     <NBBadge
-      borderRadius={rounded ? 'full' : 'md' as any}
+      borderRadius={rounded ? 'full' : 'md'}
       alignSelf="flex-start"
       {...variantStyles}
       {...sizeStyles}
@@ -98,7 +98,7 @@ export const Badge: React.FC<CustomBadgeProps> = ({
         {leftIcon && (
           <Icon
             as={MaterialIcons}
-            name={leftIcon as any}
+            name={leftIcon as keyof typeof MaterialIcons.glyphMap}
             size={sizeStyles.iconSize}
             color={iconColor}
           />
@@ -109,7 +109,7 @@ export const Badge: React.FC<CustomBadgeProps> = ({
         {rightIcon && (
           <Icon
             as={MaterialIcons}
-            name={rightIcon as any}
+            name={rightIcon as keyof typeof MaterialIcons.glyphMap}
             size={sizeStyles.iconSize}
             color={iconColor}
           />
@@ -184,7 +184,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
   return (
     <Badge
       label={config.label}
-      colorScheme={config.colorScheme as any}
+      colorScheme={config.colorScheme as CustomBadgeProps['colorScheme']}
       leftIcon={config.leftIcon}
       size={size}
       variant="subtle"
@@ -239,7 +239,7 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, size = '
   return (
     <Badge
       label={config.label}
-      colorScheme={config.colorScheme as any}
+      colorScheme={config.colorScheme as CustomBadgeProps['colorScheme']}
       leftIcon={config.leftIcon}
       size={size}
       variant="solid"

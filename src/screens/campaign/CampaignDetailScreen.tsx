@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Image } from 'react-native';
 import {
   Box,
@@ -100,7 +100,7 @@ export const CampaignDetailScreen = () => {
   });
 
   // Mock data - In real app, this would come from Supabase
-  const mockCampaign: Campaign = {
+  const mockCampaign: Campaign = useMemo(() => ({
     id: campaignId,
     title: 'Tüm Ürünlerde %30 İndirim',
     description: 'Seçili kategorilerde geçerli olan özel indirim kampanyası. Sınırlı süre için tüm mağazalarımızda geçerli.',
@@ -165,13 +165,9 @@ export const CampaignDetailScreen = () => {
         date: '2024-01-13',
       },
     ],
-  };
+  }), [campaignId]);
 
-  useEffect(() => {
-    loadCampaignDetails();
-  }, [campaignId]);
-
-  const loadCampaignDetails = async () => {
+  const loadCampaignDetails = useCallback(async () => {
     try {
       setLoading(true);
       // Here we would normally fetch from Supabase
@@ -192,7 +188,11 @@ export const CampaignDetailScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, mockCampaign]);
+
+  useEffect(() => {
+    loadCampaignDetails();
+  }, [loadCampaignDetails]);
 
   const handleUseCampaign = async () => {
     try {

@@ -103,7 +103,7 @@ export const Avatar: React.FC<CustomAvatarProps> = ({
         {name ? (
           getInitials(name)
         ) : (
-          <MaterialIcons name={fallbackIcon as any} size={size === 'xs' ? 16 : size === 'sm' ? 20 : size === 'md' ? 24 : size === 'lg' ? 32 : size === 'xl' ? 40 : 48} color="white" />
+          <MaterialIcons name={fallbackIcon as keyof typeof MaterialIcons.glyphMap} size={size === 'xs' ? 16 : size === 'sm' ? 20 : size === 'md' ? 24 : size === 'lg' ? 32 : size === 'xl' ? 40 : 48} color="white" />
         )}
       </NBAvatar>
       

@@ -79,12 +79,16 @@ CREATE TABLE public.program_activities (
     activity_type TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    category TEXT,
     location GEOGRAPHY(POINT),
     address TEXT,
     start_time TIMESTAMPTZ,
     end_time TIMESTAMPTZ,
+    due_date DATE,
     estimated_cost DECIMAL(10,2),
     actual_cost DECIMAL(10,2),
+    target_amount DECIMAL(10,2),
+    spent_amount DECIMAL(10,2) DEFAULT 0,
     booking_reference TEXT,
     status TEXT DEFAULT 'planned' CHECK (status IN ('planned', 'confirmed', 'completed', 'cancelled')),
     notes TEXT,
@@ -174,6 +178,21 @@ CREATE TABLE public.company_analytics (
     demographic_data JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(company_id, date)
+);
+
+-- Expenses tracking
+CREATE TABLE public.expenses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    activity_id UUID REFERENCES public.program_activities(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    category TEXT,
+    date DATE DEFAULT CURRENT_DATE,
+    receipt_url TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- AI Recommendations
@@ -267,6 +286,8 @@ CREATE INDEX idx_companies_location ON public.companies USING GIST(location);
 CREATE INDEX idx_companies_category ON public.companies(category);
 CREATE INDEX idx_programs_user_date ON public.programs(user_id, date);
 CREATE INDEX idx_program_activities_program ON public.program_activities(program_id);
+CREATE INDEX idx_expenses_activity ON public.expenses(activity_id);
+CREATE INDEX idx_expenses_user ON public.expenses(user_id);
 CREATE INDEX idx_campaigns_company_dates ON public.campaigns(company_id, start_date, end_date);
 CREATE INDEX idx_user_campaigns_user ON public.user_campaigns(user_id);
 CREATE INDEX idx_social_shares_user ON public.social_shares(user_id);
@@ -281,6 +302,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.program_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.social_shares ENABLE ROW LEVEL SECURITY;
@@ -312,6 +334,9 @@ CREATE POLICY "Company owners can manage companies" ON public.companies FOR ALL 
 -- Public company data is viewable
 CREATE POLICY "Companies are publicly viewable" ON public.companies FOR SELECT USING (true);
 
+-- Users can manage their own expenses
+CREATE POLICY "Users can manage own expenses" ON public.expenses FOR ALL USING (auth.uid() = user_id);
+
 -- Functions and Triggers
 -- Update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -327,6 +352,7 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR E
 CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON public.companies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON public.programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_program_activities_updated_at BEFORE UPDATE ON public.program_activities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_expenses_updated_at BEFORE UPDATE ON public.expenses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_campaigns_updated_at BEFORE UPDATE ON public.campaigns FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_partnerships_updated_at BEFORE UPDATE ON public.partnerships FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -354,4 +380,4 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_company_rating_trigger
 AFTER INSERT OR UPDATE OR DELETE ON public.reviews
-FOR EACH ROW EXECUTE FUNCTION update_company_rating(); 
+FOR EACH ROW EXECUTE FUNCTION update_company_rating();

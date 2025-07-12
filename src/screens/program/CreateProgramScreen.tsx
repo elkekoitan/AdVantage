@@ -19,10 +19,16 @@ import {
   Badge,
   Divider,
   Switch,
+  Modal,
+  Slider,
+  Checkbox,
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../../contexts/AuthContext';
+import { geminiService } from '../../services/gemini';
+import { supabase } from '../../services/supabase';
 
 
 
@@ -59,9 +65,13 @@ interface ActivityForm {
 export const CreateProgramScreen = () => {
   const navigation = useNavigation<CreateProgramNavigationProp>();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any>(null);
 
   // Program Form State
   const [programForm, setProgramForm] = useState({
@@ -83,6 +93,17 @@ export const CreateProgramScreen = () => {
     category: '',
     target_amount: '',
     due_date: '',
+  });
+
+  // AI Preferences State
+  const [aiPreferences, setAiPreferences] = useState({
+    budget: 1000,
+    duration: '1 gün',
+    location: 'İstanbul',
+    interests: [] as string[],
+    occasion: '',
+    groupSize: 1,
+    activityTypes: [] as string[],
   });
 
   // Templates
@@ -217,6 +238,86 @@ export const CreateProgramScreen = () => {
     setActivities(newActivities);
   };
 
+  const handleGenerateAiProgram = async () => {
+    if (!user) {
+      toast.show({
+        title: 'Hata',
+        description: 'Giriş yapmanız gerekiyor.',
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+      
+      const userPreferences = await geminiService.getUserPreferences(user.id);
+      
+      const aiRequest = {
+        user_preferences: {
+          ...userPreferences,
+          interests: aiPreferences.interests,
+          activity_types: aiPreferences.activityTypes,
+        },
+        date: new Date().toISOString().split('T')[0],
+        location: aiPreferences.location,
+        budget: aiPreferences.budget,
+        duration: aiPreferences.duration,
+        occasion: aiPreferences.occasion,
+        group_size: aiPreferences.groupSize,
+      };
+
+      const suggestion = await geminiService.generateDailyProgram(aiRequest);
+      
+      if (suggestion) {
+        setAiSuggestions(suggestion);
+        setShowAiModal(true);
+      } else {
+        toast.show({
+          title: 'Hata',
+          description: 'AI önerisi oluşturulamadı. Lütfen tekrar deneyin.',
+          variant: 'top-accent',
+          bgColor: 'orange.500',
+        });
+      }
+    } catch (error) {
+      console.error('AI program generation error:', error);
+      toast.show({
+        title: 'Hata',
+        description: 'AI önerisi oluşturulurken bir hata oluştu.',
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAcceptAiSuggestion = () => {
+    if (aiSuggestions) {
+      setProgramForm({
+        ...programForm,
+        title: aiSuggestions.title,
+        description: aiSuggestions.description,
+        total_budget: aiSuggestions.total_estimated_cost.toString(),
+        category: aiSuggestions.tags?.[0] || 'Genel',
+      });
+
+      const aiActivities = aiSuggestions.activities.map((activity: any) => ({
+        title: activity.title,
+        description: activity.description,
+        category: activity.type,
+        target_amount: activity.estimated_cost.toString(),
+        due_date: '',
+      }));
+      
+      setActivities(aiActivities);
+      setShowAiModal(false);
+      setCurrentStep(2);
+    }
+  };
+
   const handleCreateProgram = async () => {
     if (!programForm.title.trim() || !programForm.total_budget || activities.length === 0) {
       toast.show({
@@ -228,11 +329,55 @@ export const CreateProgramScreen = () => {
       return;
     }
 
+    if (!user) {
+      toast.show({
+        title: 'Hata',
+        description: 'Giriş yapmanız gerekiyor.',
+        variant: 'top-accent',
+        bgColor: 'red.500',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Here we would normally create the program in Supabase
-      const mockProgramId = 'new-program-' + Date.now();
+      // Create program in Supabase
+      const { data: programData, error: programError } = await supabase
+        .from('programs')
+        .insert({
+          user_id: user.id,
+          title: programForm.title,
+          description: programForm.description,
+          category: programForm.category,
+          total_budget: parseFloat(programForm.total_budget),
+          start_date: programForm.start_date || new Date().toISOString(),
+          end_date: programForm.end_date,
+          auto_tracking: programForm.auto_tracking,
+          notifications: programForm.notifications,
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (programError) throw programError;
+
+      // Create activities
+      const activitiesData = activities.map(activity => ({
+        program_id: programData.id,
+        title: activity.title,
+        description: activity.description,
+        category: activity.category,
+        target_amount: parseFloat(activity.target_amount),
+        due_date: activity.due_date || null,
+        status: 'pending',
+      }));
+
+      const { error: activitiesError } = await supabase
+        .from('activities')
+        .insert(activitiesData);
+
+      if (activitiesError) throw activitiesError;
 
       toast.show({
         title: 'Başarılı',
@@ -242,12 +387,13 @@ export const CreateProgramScreen = () => {
       });
 
       // Navigate to program detail
-      navigation.navigate('ProgramDetail', { programId: mockProgramId });
+      navigation.navigate('ProgramDetail', { programId: programData.id });
     } catch (error: unknown) {
       let errorMessage = 'Program oluşturulurken bir hata oluştu.';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
+      console.error('Create program error:', error);
       toast.show({
         title: 'Hata',
         description: errorMessage,
@@ -300,6 +446,212 @@ export const CreateProgramScreen = () => {
     );
   };
 
+  const renderAiModal = () => (
+    <Modal isOpen={showAiModal} onClose={() => setShowAiModal(false)} size="full">
+      <Modal.Content>
+        <Modal.CloseButton />
+        <Modal.Header>AI Program Önerisi</Modal.Header>
+        <Modal.Body>
+          {aiSuggestions && (
+            <VStack space={4}>
+              <VStack space={2}>
+                <Text fontSize="lg" fontWeight="bold" color="gray.700">
+                  {aiSuggestions.title}
+                </Text>
+                <Text fontSize="sm" color="gray.600">
+                  {aiSuggestions.description}
+                </Text>
+              </VStack>
+              
+              <HStack justifyContent="space-between">
+                <Text fontSize="sm" color="gray.500">
+                  Toplam Bütçe: ₺{aiSuggestions.total_estimated_cost?.toLocaleString()}
+                </Text>
+                <Text fontSize="sm" color="gray.500">
+                  Süre: {aiSuggestions.total_duration}
+                </Text>
+              </HStack>
+              
+              <VStack space={3}>
+                <Text fontSize="md" fontWeight="semibold" color="gray.700">
+                  Önerilen Aktiviteler:
+                </Text>
+                {aiSuggestions.activities?.map((activity: any, index: number) => (
+                  <Card key={index}>
+                    <VStack space={2} p={3}>
+                      <Text fontSize="md" fontWeight="semibold">
+                        {activity.title}
+                      </Text>
+                      <Text fontSize="sm" color="gray.600">
+                        {activity.description}
+                      </Text>
+                      <HStack justifyContent="space-between">
+                        <Text fontSize="xs" color="gray.500">
+                          {activity.estimated_duration}
+                        </Text>
+                        <Text fontSize="xs" color="primary.500">
+                          ₺{activity.estimated_cost}
+                        </Text>
+                      </HStack>
+                    </VStack>
+                  </Card>
+                ))}
+              </VStack>
+              
+              {aiSuggestions.tags && (
+                <HStack space={2} flexWrap="wrap">
+                  {aiSuggestions.tags.map((tag: string, index: number) => (
+                    <Badge key={index} colorScheme="primary" variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </HStack>
+              )}
+            </VStack>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button.Group space={2}>
+            <Button variant="ghost" onPress={() => setShowAiModal(false)}>
+              İptal
+            </Button>
+            <Button onPress={handleAcceptAiSuggestion}>
+              Bu Öneriye Kabul Et
+            </Button>
+          </Button.Group>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
+  );
+
+  const renderAiPreferences = () => (
+    <VStack space={6} p={4}>
+      <VStack space={2}>
+        <Heading size="lg" color="gray.700" textAlign="center">
+          AI Program Oluşturucu
+        </Heading>
+        <Text color="gray.600" textAlign="center" fontSize="sm">
+          Tercihlerinizi belirtin, AI size özel program önerisi oluştursun
+        </Text>
+      </VStack>
+
+      <VStack space={4}>
+        <FormControl>
+          <FormControl.Label>Bütçe (₺)</FormControl.Label>
+          <VStack space={2}>
+            <Slider
+              value={aiPreferences.budget}
+              onChange={(value) => setAiPreferences({...aiPreferences, budget: value})}
+              minValue={100}
+              maxValue={10000}
+              step={100}
+            >
+              <Slider.Track>
+                <Slider.FilledTrack />
+              </Slider.Track>
+              <Slider.Thumb />
+            </Slider>
+            <Text fontSize="sm" color="gray.600" textAlign="center">
+              ₺{aiPreferences.budget.toLocaleString()}
+            </Text>
+          </VStack>
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Süre</FormControl.Label>
+          <Select
+            selectedValue={aiPreferences.duration}
+            onValueChange={(value) => setAiPreferences({...aiPreferences, duration: value})}
+            placeholder="Süre seçin"
+          >
+            <Select.Item label="Yarım gün" value="4 saat" />
+            <Select.Item label="1 gün" value="1 gün" />
+            <Select.Item label="2 gün" value="2 gün" />
+            <Select.Item label="3 gün" value="3 gün" />
+            <Select.Item label="1 hafta" value="1 hafta" />
+          </Select>
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Lokasyon</FormControl.Label>
+          <Input
+            value={aiPreferences.location}
+            onChangeText={(text) => setAiPreferences({...aiPreferences, location: text})}
+            placeholder="Şehir veya bölge"
+          />
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Özel Durum (İsteğe bağlı)</FormControl.Label>
+          <Input
+            value={aiPreferences.occasion}
+            onChangeText={(text) => setAiPreferences({...aiPreferences, occasion: text})}
+            placeholder="Örn: Doğum günü, romantik akşam"
+          />
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Grup Büyüklüğü</FormControl.Label>
+          <VStack space={2}>
+            <Slider
+              value={aiPreferences.groupSize}
+              onChange={(value) => setAiPreferences({...aiPreferences, groupSize: Math.round(value)})}
+              minValue={1}
+              maxValue={10}
+              step={1}
+            >
+              <Slider.Track>
+                <Slider.FilledTrack />
+              </Slider.Track>
+              <Slider.Thumb />
+            </Slider>
+            <Text fontSize="sm" color="gray.600" textAlign="center">
+              {aiPreferences.groupSize} kişi
+            </Text>
+          </VStack>
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>İlgi Alanları</FormControl.Label>
+          <VStack space={2}>
+            {['Yemek', 'Kültür', 'Spor', 'Doğa', 'Alışveriş', 'Eğlence', 'Sanat', 'Tarih'].map((interest) => (
+              <Checkbox
+                key={interest}
+                value={interest}
+                isChecked={aiPreferences.interests.includes(interest)}
+                onChange={(isChecked) => {
+                  if (isChecked) {
+                    setAiPreferences({
+                      ...aiPreferences,
+                      interests: [...aiPreferences.interests, interest]
+                    });
+                  } else {
+                    setAiPreferences({
+                      ...aiPreferences,
+                      interests: aiPreferences.interests.filter(i => i !== interest)
+                    });
+                  }
+                }}
+              >
+                {interest}
+              </Checkbox>
+            ))}
+          </VStack>
+        </FormControl>
+      </VStack>
+
+      <Button
+        onPress={handleGenerateAiProgram}
+        isLoading={aiLoading}
+        isLoadingText="AI Önerisi Oluşturuluyor..."
+        leftIcon={<Icon as={MaterialIcons} name="auto-awesome" size={5} />}
+        size="lg"
+      >
+        AI ile Program Oluştur
+      </Button>
+    </VStack>
+  );
+
   const renderStep1 = () => (
     <VStack space={6} p={4}>
       <VStack space={2}>
@@ -307,9 +659,32 @@ export const CreateProgramScreen = () => {
           Program Türü Seçin
         </Heading>
         <Text color="gray.600" textAlign="center" fontSize="sm">
-          Hazır şablonlardan birini seçin veya sıfırdan oluşturun
+          Hazır şablonlardan birini seçin, AI ile oluşturun veya sıfırdan başlayın
         </Text>
       </VStack>
+
+      {/* AI Program Oluşturucu */}
+      <Card bg="gradient.500" p={4}>
+        <VStack space={3}>
+          <HStack alignItems="center" space={2}>
+            <Icon as={MaterialIcons} name="auto-awesome" size={6} color="white" />
+            <Text fontSize="lg" fontWeight="bold" color="white">
+              AI Program Oluşturucu
+            </Text>
+          </HStack>
+          <Text fontSize="sm" color="white" opacity={0.9}>
+            Yapay zeka ile kişiselleştirilmiş program önerisi alın
+          </Text>
+          <Button
+            variant="outline"
+            _text={{ color: 'white' }}
+            borderColor="white"
+            onPress={() => setCurrentStep(0)} // AI preferences step
+          >
+            AI ile Oluştur
+          </Button>
+        </VStack>
+      </Card>
 
       <VStack space={4}>
         <Text fontSize="md" fontWeight="semibold" color="gray.700">
@@ -680,13 +1055,17 @@ export const CreateProgramScreen = () => {
 
   return (
     <Box flex={1} bg="gray.50" safeArea>
-      {renderStepIndicator()}
+      {currentStep > 0 && renderStepIndicator()}
       
       <ScrollView flex={1}>
+        {currentStep === 0 && renderAiPreferences()}
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
         {currentStep === 3 && renderStep3()}
       </ScrollView>
+
+      {/* AI Modal */}
+      {renderAiModal()}
     </Box>
   );
 };
