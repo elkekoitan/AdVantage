@@ -5,9 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   ActivityIndicator,
   Alert,
   Linking,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { openRouteService } from '../services/openRouteService';
@@ -67,7 +69,7 @@ interface LocationBasedSuggestionsProps {
   userLocation?: { latitude: number; longitude: number } | null;
   activityType?: string;
   onPlaceSelect?: (place: Place) => void;
-  onNavigateToMap?: (place: Place, routeInfo?: { distance: string; duration: string; coordinates?: number[][] }) => void;
+  onNavigateToMap?: (place?: Place, searchQuery?: string) => void;
 }
 
 const ACTIVITY_TYPES = {
@@ -119,6 +121,9 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedActivityType, setSelectedActivityType] = useState(activityType || 'gym');
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreResults, setHasMoreResults] = useState(true);
 
   const fetchNearbyPlaces = useCallback(async (type: string) => {
     if (!userLocation) return;
@@ -127,22 +132,74 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
     setError(null);
     
     try {
-      const results = await openRouteService.findNearbyPOIs(
+      // Enhanced search with multiple approaches
+      let results;
+      
+      // First try enhanced search
+      try {
+        const searchResults = await openRouteService.searchPlaces(
+          { lat: userLocation.latitude, lng: userLocation.longitude },
+          type,
+          {
+            category: type,
+            radius: 3000, // 3km radius for better results
+            maxResults: 15
+          }
+        );
+        
+        if (searchResults && searchResults.places && searchResults.places.length > 0) {
+          // Convert PlaceDetails to Place format
+          const formattedPlaces = searchResults.places.map(place => ({
+            properties: {
+              id: place.id,
+              name: place.name,
+              label: place.address,
+              category: place.category
+            },
+            geometry: {
+              coordinates: [place.coordinates.lng, place.coordinates.lat] as [number, number]
+            }
+          }));
+          setPlaces(formattedPlaces);
+          return;
+        }
+      } catch (searchError) {
+        console.log('Enhanced search failed, falling back to basic search:', searchError);
+      }
+      
+      // Fallback to basic POI search
+      results = await openRouteService.findNearbyPOIs(
         { lat: userLocation.latitude, lng: userLocation.longitude },
         type,
         5000 // 5km radius
       );
-      const formattedPlaces = results.features?.slice(0, 10).map(feature => ({
-        ...feature,
-        geometry: {
-          ...feature.geometry,
-          coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [number, number]
-        }
-      })) || [];
+      
+      const formattedPlaces = results.features?.slice(0, 12).map(feature => {
+        // Calculate distance for sorting
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          feature.geometry.coordinates[1],
+          feature.geometry.coordinates[0]
+        );
+        
+        return {
+          ...feature,
+          geometry: {
+            ...feature.geometry,
+            coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [number, number]
+          },
+          distance: parseFloat(distance.replace(/[^0-9.]/g, '')) // Extract numeric distance
+        };
+      }) || [];
+      
+      // Sort by distance
+      formattedPlaces.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      
       setPlaces(formattedPlaces);
     } catch (err) {
       console.error('Error fetching nearby places:', err);
-      setError('Yakındaki yerler yüklenirken hata oluştu.');
+      setError('Yakındaki yerler yüklenirken hata oluştu. İnternet bağlantınızı kontrol edin.');
     } finally {
       setLoading(false);
     }
@@ -156,7 +213,58 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
 
   const handleActivityTypeChange = (type: string) => {
     setSelectedActivityType(type);
+    setHasMoreResults(true); // Reset for new category
   };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    setHasMoreResults(true);
+    await fetchNearbyPlaces(selectedActivityType);
+    setRefreshing(false);
+  }, [selectedActivityType, fetchNearbyPlaces]);
+
+  const loadMorePlaces = useCallback(async () => {
+    if (loadingMore || !hasMoreResults || !userLocation) return;
+
+    setLoadingMore(true);
+    try {
+      // Search with larger radius for more results
+      const results = await openRouteService.findNearbyPOIs(
+        { lat: userLocation.latitude, lng: userLocation.longitude },
+        selectedActivityType,
+        8000 // 8km radius for more results
+      );
+      
+      const newPlaces = results.features?.slice(places.length, places.length + 10).map(feature => {
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          feature.geometry.coordinates[1],
+          feature.geometry.coordinates[0]
+        );
+        
+        return {
+          ...feature,
+          geometry: {
+            ...feature.geometry,
+            coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [number, number]
+          },
+          distance: parseFloat(distance.replace(/[^0-9.]/g, ''))
+        };
+      }) || [];
+      
+      if (newPlaces.length === 0) {
+        setHasMoreResults(false);
+      } else {
+        setPlaces(prev => [...prev, ...newPlaces]);
+      }
+    } catch (err) {
+      console.error('Error loading more places:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [userLocation, selectedActivityType, places.length, loadingMore, hasMoreResults]);
 
   const handleGetDirections = async (place: Place) => {
     try {
@@ -170,12 +278,15 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
          const route = routeResponse.features[0];
          const summary = route.properties.summary;
          
-         // Navigate to map with OpenRouteService route information
-         onNavigateToMap?.(place, {
-           distance: `${(summary.distance / 1000).toFixed(1)} km`,
-           duration: `${Math.round(summary.duration / 60)} min`,
-           coordinates: route.geometry.coordinates
-         });
+         // Show route info and navigate to map
+         Alert.alert(
+           'Yol Tarifi',
+           `Mesafe: ${(summary.distance / 1000).toFixed(1)} km\nSüre: ${Math.round(summary.duration / 60)} dakika`,
+           [
+             { text: 'Tamam' },
+             { text: 'Haritada Göster', onPress: () => onNavigateToMap?.(place) },
+           ]
+         );
         return;
       }
     } catch (error) {
@@ -342,9 +453,41 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
           </Text>
         </View>
       ) : (
-        <ScrollView style={styles.placesList} showsVerticalScrollIndicator={false}>
-          {places.map(renderPlaceCard)}
-        </ScrollView>
+        <FlatList
+          data={places}
+          renderItem={({ item }) => renderPlaceCard(item)}
+          keyExtractor={(item, index) => item.properties.id || item.properties.name || index.toString()}
+          style={styles.placesList}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          onEndReached={loadMorePlaces}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={() => {
+            if (loadingMore) {
+              return (
+                <View style={styles.loadingMoreContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.loadingMoreText}>Daha fazla yer yükleniyor...</Text>
+                </View>
+              );
+            }
+            if (!hasMoreResults && places.length > 0) {
+              return (
+                <View style={styles.endOfListContainer}>
+                  <Text style={styles.endOfListText}>Tüm sonuçlar gösterildi</Text>
+                </View>
+              );
+            }
+            return null;
+          }}
+        />
       )}
     </View>
   );
@@ -554,6 +697,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     ...typography.body,
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginLeft: 8,
+    ...typography.body,
+  },
+  endOfListContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  endOfListText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    ...typography.caption,
   },
 });
 

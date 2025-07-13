@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
-// import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LocationBasedSuggestions from '../../components/LocationBasedSuggestions';
 import { openRouteService } from '../../services/openRouteService';
 import * as Location from 'expo-location';
-// import type { MainStackParamList } from '../../navigation/MainNavigator';
+import type { MainStackParamList } from '../../navigation/MainNavigator';
 
 // Design system
 const colors = {
@@ -68,10 +68,10 @@ interface QuickAction {
   action: () => void;
 }
 
-// type ExploreScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
+type ExploreScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 const ExploreScreen: React.FC = () => {
-  // const navigation = useNavigation<ExploreScreenNavigationProp>();
+  const navigation = useNavigation<ExploreScreenNavigationProp>();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -166,25 +166,72 @@ const ExploreScreen: React.FC = () => {
     
     try {
       setLoading(true);
-      const results = await openRouteService.findNearbyPOIs(
-         userLocation || { lat: 41.0082, lng: 28.9784 }, // Default to Istanbul
-         searchQuery,
-         5000
-       );
       
-      if (results.features && results.features.length > 0) {
-        handleNavigateToMap();
+      // Enhanced search with filters
+      const searchFilters = {
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        radius: 5000, // 5km radius
+        maxResults: 20,
+        sortBy: 'distance' as const
+      };
+      
+      // Use enhanced search function
+      const searchResult = await openRouteService.searchPlaces(
+        userLocation || { lat: 41.0082, lng: 28.9784 }, // Default to Istanbul
+        searchQuery,
+        searchFilters
+      );
+      
+      if (searchResult && searchResult.places && searchResult.places.length > 0) {
+        // Show search results in a more detailed way
+        const resultText = searchResult.places.slice(0, 3).map((place, index) => 
+          `${index + 1}. ${place.name}\n   ${place.address || 'Adres bilgisi yok'}\n   Mesafe: ${place.coordinates ? 'Yakın' : 'Bilinmiyor'}`
+        ).join('\n\n');
+        
+        Alert.alert(
+          `${searchResult.totalCount} Sonuç Bulundu`,
+          resultText + (searchResult.totalCount > 3 ? `\n\n...ve ${searchResult.totalCount - 3} sonuç daha` : ''),
+          [
+            { text: 'Tamam' },
+            { text: 'Haritada Göster', onPress: () => handleNavigateToMap() },
+          ]
+        );
       } else {
-        Alert.alert('Sonuç Bulunamadı', 'Arama kriterlerinize uygun yer bulunamadı.');
+        // Try alternative search if no results
+        const alternativeResults = await openRouteService.findNearbyPOIs(
+          userLocation || { lat: 41.0082, lng: 28.9784 },
+          searchQuery,
+          10000 // Expand search radius
+        );
+        
+        if (alternativeResults.features && alternativeResults.features.length > 0) {
+          Alert.alert(
+            'Yakın Sonuçlar',
+            `${alternativeResults.features.length} sonuç daha geniş alanda bulundu.`,
+            [
+              { text: 'Tamam' },
+              { text: 'Haritada Göster', onPress: () => handleNavigateToMap() },
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Sonuç Bulunamadı', 
+            'Arama kriterlerinize uygun yer bulunamadı. Farklı anahtar kelimeler deneyin.'
+          );
+        }
       }
     } catch (error) {
-      Alert.alert('Hata', 'Arama yapılırken bir hata oluştu.');
+      console.error('Search error:', error);
+      Alert.alert(
+        'Arama Hatası', 
+        'Arama yapılırken bir hata oluştu. İnternet bağlantınızı kontrol edin.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNearbySearch = () => {
+  const handleNearbySearch = async () => {
     if (!userLocation) {
       Alert.alert(
         'Konum Gerekli',
@@ -192,8 +239,57 @@ const ExploreScreen: React.FC = () => {
       );
       return;
     }
-    // Scroll to location suggestions or navigate to map
-    Alert.alert('Yakında', 'Harita özelliği yakında gelecek!');
+    
+    try {
+      setLoading(true);
+      
+      // Search for nearby places based on selected category
+      const category = selectedCategory !== 'all' ? selectedCategory : 'restaurant';
+      const results = await openRouteService.findNearbyPOIs(
+        userLocation,
+        category,
+        2000 // 2km radius for nearby search
+      );
+      
+      if (results.features && results.features.length > 0) {
+        const nearbyPlaces = results.features.slice(0, 5).map((place, index) => {
+          const name = place.properties.name || 'İsimsiz Yer';
+          const category = place.properties.category || 'Kategori Yok';
+          const distance = place.properties.distance 
+            ? (place.properties.distance / 1000).toFixed(1) + ' km'
+            : 'Mesafe bilinmiyor';
+          return `${index + 1}. ${name}\n   ${category} - ${distance}`;
+        }).join('\n\n');
+        
+        Alert.alert(
+          `Yakınımda ${results.features.length} Yer Bulundu`,
+          nearbyPlaces + (results.features.length > 5 ? `\n\n...ve ${results.features.length - 5} yer daha` : ''),
+          [
+            { text: 'Tamam' },
+            { text: 'Haritada Göster', onPress: () => handleNavigateToMap() },
+            { text: 'Detayları Gör', onPress: () => {
+              // Show first place details
+              if (results.features[0]) {
+                handlePlaceSelect(results.features[0]);
+              }
+            }}
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Yakında Yer Bulunamadı',
+          `${category} kategorisinde yakınınızda yer bulunamadı. Farklı bir kategori deneyin.`
+        );
+      }
+    } catch (error) {
+      console.error('Nearby search error:', error);
+      Alert.alert(
+        'Arama Hatası',
+        'Yakındaki yerler aranırken bir hata oluştu.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDirections = () => {
@@ -205,7 +301,7 @@ const ExploreScreen: React.FC = () => {
         {
           text: 'Haritada Seç',
           onPress: () => {
-            Alert.alert('Yakında', 'Harita özelliği yakında gelecek!');
+            handleNavigateToMap(undefined, searchQuery);
           },
         },
       ]
@@ -240,7 +336,7 @@ const ExploreScreen: React.FC = () => {
           `Mesafe: ${distance}\nSüre: ${duration}`,
           [
             { text: 'Tamam' },
-            { text: 'Haritada Göster', onPress: () => handleNavigateToMap() },
+            { text: 'Haritada Göster', onPress: () => handleNavigateToMap(place) },
           ]
         );
       } else {
@@ -265,13 +361,34 @@ const ExploreScreen: React.FC = () => {
         { text: 'İptal', style: 'cancel' },
         { text: 'Yol Tarifi', onPress: () => handleGetDirections(place) },
         { text: 'Favorilere Ekle', onPress: () => handleAddToFavorites(place) },
-        { text: 'Haritada Göster', onPress: () => handleNavigateToMap() },
+        { text: 'Haritada Göster', onPress: () => handleNavigateToMap(place) },
       ]
     );
   };
 
-  const handleNavigateToMap = () => {
-    Alert.alert('Yakında', 'Harita özelliği yakında gelecek!');
+  const handleNavigateToMap = (place?: any, searchQuery?: string) => {
+    const params: any = {};
+    
+    if (place) {
+      params.initialLocation = {
+        latitude: place.geometry.coordinates[1],
+        longitude: place.geometry.coordinates[0],
+      };
+      params.places = [place];
+    }
+    
+    if (searchQuery) {
+      params.searchQuery = searchQuery;
+    }
+    
+    if (userLocation && !place) {
+      params.initialLocation = {
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+      };
+    }
+    
+    navigation.navigate('Map', params);
   };
 
   const renderCategoryButton = (category: ExploreCategory) => {

@@ -78,6 +78,7 @@ export interface SearchFilters {
   hasWifi?: boolean;
   hasParking?: boolean;
   isAccessible?: boolean;
+  maxResults?: number;
 }
 
 export interface RouteResponse {
@@ -171,6 +172,7 @@ export interface MatrixResponse {
 }
 
 export interface POIResponse {
+  type?: string;
   features: Array<{
     geometry: {
       coordinates: number[];
@@ -191,8 +193,10 @@ export interface POIResponse {
       amenity?: string;
       cuisine?: string;
       price_level?: string;
+      distance?: number;
     };
   }>;
+  bbox?: string;
 }
 
 export interface EnhancedPOIResponse {
@@ -474,7 +478,7 @@ class OpenRouteService {
   }
 
   /**
-   * Find nearest POIs (Points of Interest) - Enhanced version
+   * Find nearest POIs (Points of Interest) - Enhanced version with Overpass API
    */
   async findNearbyPOIs(
     location: Coordinates,
@@ -482,41 +486,8 @@ class OpenRouteService {
     radius: number = 1000 // meters
   ): Promise<POIResponse> {
     try {
-      // This would typically use a POI service or Overpass API
-      // For now, we'll use a simple approach with geocoding
-      const response = await orsApi.get('/geocode/search', {
-        params: {
-          text: category,
-          'focus.point.lat': location.lat,
-          'focus.point.lon': location.lng,
-          'boundary.circle.lat': location.lat,
-          'boundary.circle.lon': location.lng,
-          'boundary.circle.radius': radius / 1000, // convert to km
-          size: 20,
-          layers: 'venue'
-        }
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('OpenRouteService POI search error:', error);
-      throw new Error('Yakındaki yerler bulunamadı');
-    }
-  }
-
-  /**
-   * Enhanced POI search with filters
-   */
-  async searchPlaces(
-    location: Coordinates,
-    query: string,
-    filters: SearchFilters = {}
-  ): Promise<EnhancedPOIResponse> {
-    try {
-      const radius = filters.radius || 5000;
-      
-      // Build Overpass query for more detailed POI data
-      const overpassQuery = this.buildOverpassQuery(location, query, radius);
+      // Use Overpass API for better POI data
+      const overpassQuery = this.buildOverpassQuery(location, category, radius);
       
       const response = await axios.post(OVERPASS_API_URL, overpassQuery, {
         headers: {
@@ -527,21 +498,115 @@ class OpenRouteService {
 
       const places = this.parseOverpassResponse(response.data);
       
+      // Convert to POIResponse format
+      const features = places.map(place => ({
+        type: 'Feature' as const,
+        properties: {
+          id: place.id,
+          name: place.name,
+          label: place.address,
+          category: place.category,
+          osm_id: place.id,
+          osm_type: 'node'
+        },
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [place.coordinates.lng, place.coordinates.lat]
+        }
+      }));
+
       return {
-        places,
-        totalCount: places.length,
-        hasMore: places.length >= 20,
-        nextPageToken: places.length >= 20 ? 'next_page_token' : undefined
+        type: 'FeatureCollection',
+        features,
+        bbox: this.calculateBoundingBox(location, radius)
+      };
+    } catch (error) {
+      console.error('OpenRouteService POI search error:', error);
+      
+      // Fallback to geocoding API
+      try {
+        const response = await orsApi.get('/geocode/search', {
+          params: {
+            text: category,
+            'focus.point.lat': location.lat,
+            'focus.point.lon': location.lng,
+            'boundary.circle.lat': location.lat,
+            'boundary.circle.lon': location.lng,
+            'boundary.circle.radius': radius / 1000, // convert to km
+            size: 20,
+            layers: 'venue'
+          }
+        });
+
+        return response.data;
+      } catch (fallbackError) {
+        console.error('Fallback geocoding error:', fallbackError);
+        throw new Error('Yakındaki yerler bulunamadı');
+      }
+    }
+  }
+
+  /**
+   * Enhanced POI search with filters and caching
+   */
+  async searchPlaces(
+    location: Coordinates,
+    query: string,
+    filters: SearchFilters = {}
+  ): Promise<EnhancedPOIResponse> {
+    try {
+      const radius = filters.radius || 5000;
+      const maxResults = filters.maxResults || 20;
+      
+      // Build Overpass query for more detailed POI data
+      const overpassQuery = this.buildOverpassQuery(location, query, radius, maxResults);
+      
+      const response = await axios.post(OVERPASS_API_URL, overpassQuery, {
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        timeout: 15000
+      });
+
+      const places = this.parseOverpassResponse(response.data);
+      
+      // Sort by distance if location is provided
+      const sortedPlaces = places.sort((a, b) => {
+        const distA = this.calculateDistanceKm(
+          location.lat, location.lng,
+          a.coordinates.lat, a.coordinates.lng
+        );
+        const distB = this.calculateDistanceKm(
+          location.lat, location.lng,
+          b.coordinates.lat, b.coordinates.lng
+        );
+        return distA - distB;
+      });
+      
+      return {
+        places: sortedPlaces.slice(0, maxResults),
+        totalCount: sortedPlaces.length,
+        hasMore: sortedPlaces.length > maxResults,
+        nextPageToken: sortedPlaces.length > maxResults ? 'next_page_token' : undefined
       };
     } catch (error) {
       console.error('Enhanced POI search error:', error);
       // Fallback to basic search
-      const basicResult = await this.findNearbyPOIs(location, query, filters.radius);
-      return {
-        places: this.convertBasicPOIToPlaceDetails(basicResult.features),
-        totalCount: basicResult.features.length,
-        hasMore: false
-      };
+      try {
+        const basicResult = await this.findNearbyPOIs(location, query, filters.radius);
+        return {
+          places: this.convertBasicPOIToPlaceDetails(basicResult.features),
+          totalCount: basicResult.features.length,
+          hasMore: false
+        };
+      } catch (fallbackError) {
+        console.error('Fallback search error:', fallbackError);
+        return {
+          places: [],
+          totalCount: 0,
+          hasMore: false
+        };
+      }
     }
   }
 
@@ -686,21 +751,26 @@ class OpenRouteService {
   private buildOverpassQuery(
     location: Coordinates,
     query: string,
-    radius: number
+    radius: number,
+    maxResults: number = 20
   ): string {
-    const bbox = this.calculateBoundingBox(location, radius);
+    const amenityTypes = this.getCategoryAmenityTypes(query);
+    const shopTypes = this.getCategoryShopTypes(query);
+    const leisureTypes = this.getCategoryLeisureTypes(query);
     
-    const overpassQuery = `
-      [out:json][timeout:25];
+    return `
+      [out:json][timeout:25][maxsize:1073741824];
       (
-        node["amenity"~"${query}"]["name"](${bbox});
-        way["amenity"~"${query}"]["name"](${bbox});
-        relation["amenity"~"${query}"]["name"](${bbox});
+        node["amenity"~"${amenityTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
+        way["amenity"~"${amenityTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
+        relation["amenity"~"${amenityTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
+        node["shop"~"${shopTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
+        way["shop"~"${shopTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
+        node["leisure"~"${leisureTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
+        way["leisure"~"${leisureTypes.join('|')}"]["name"~"${query}",i](around:${radius},${location.lat},${location.lng});
       );
-      out center meta;
+      out center meta ${maxResults};
     `;
-
-    return overpassQuery;
   }
 
   /**
@@ -788,6 +858,65 @@ class OpenRouteService {
    */
   private generateMockRating(): number {
     return Math.round((Math.random() * 2 + 3) * 10) / 10; // 3.0 - 5.0 range
+  }
+
+  /**
+   * Get amenity types for category
+   */
+  private getCategoryAmenityTypes(query: string): string[] {
+    const categoryMap: Record<string, string[]> = {
+      restaurant: ['restaurant', 'fast_food', 'cafe', 'food_court'],
+      hotel: ['hotel', 'motel', 'hostel', 'guest_house'],
+      hospital: ['hospital', 'clinic', 'pharmacy', 'dentist'],
+      bank: ['bank', 'atm', 'bureau_de_change'],
+      fuel: ['fuel', 'charging_station'],
+      parking: ['parking', 'parking_entrance'],
+      school: ['school', 'university', 'college', 'kindergarten'],
+      shopping: ['marketplace', 'shopping_centre']
+    };
+    
+    return categoryMap[query.toLowerCase()] || ['restaurant', 'cafe', 'bank', 'hospital', 'school'];
+  }
+
+  /**
+   * Get shop types for category
+   */
+  private getCategoryShopTypes(query: string): string[] {
+    const shopMap: Record<string, string[]> = {
+      shopping: ['supermarket', 'mall', 'department_store', 'convenience'],
+      food: ['bakery', 'butcher', 'greengrocer', 'deli'],
+      clothes: ['clothes', 'shoes', 'jewelry', 'bag'],
+      electronics: ['electronics', 'mobile_phone', 'computer']
+    };
+    
+    return shopMap[query.toLowerCase()] || ['supermarket', 'convenience', 'clothes'];
+  }
+
+  /**
+   * Get leisure types for category
+   */
+  private getCategoryLeisureTypes(query: string): string[] {
+    const leisureMap: Record<string, string[]> = {
+      entertainment: ['cinema', 'theatre', 'nightclub', 'bar'],
+      sports: ['fitness_centre', 'sports_centre', 'swimming_pool', 'stadium'],
+      park: ['park', 'garden', 'playground', 'nature_reserve']
+    };
+    
+    return leisureMap[query.toLowerCase()] || ['park', 'cinema', 'fitness_centre'];
+  }
+
+  /**
+   * Calculate distance between two coordinates in kilometers
+   */
+  private calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   /**
