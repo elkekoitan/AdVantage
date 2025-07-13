@@ -704,7 +704,493 @@ git commit -m "Fix TypeScript errors and update project documentation
 11. **TypeScript Strict Mode**: Daha katı tip kontrolü için strict mode aktif et
 12. **Pre-commit Hooks**: TypeScript hatalarını commit öncesi yakala
 
+## 12. Hatalı Kod Yazımını Engelleyen Proaktif Stratejiler
+
+### A. Kod Yazma Öncesi Kontrol Listesi
+
+#### 1. TypeScript Interface ve Tip Tanımlamaları
+```typescript
+// ✅ ÖNCE: Interface'i tam tanımla
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  preferences: {
+    theme: 'light' | 'dark';
+    notifications: boolean;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ✅ SONRA: Fonksiyonu yaz
+const updateUserProfile = (userId: string, updates: Partial<UserProfile>): Promise<UserProfile> => {
+  // Implementation
+};
+
+// ❌ YANLIŞ: Interface eksik, sonra hata çıkar
+const updateUser = (id, data) => {
+  // Bu kod TypeScript hatası verecek
+};
+```
+
+#### 2. React Component Prop Tanımlamaları
+```typescript
+// ✅ ÖNCE: Props interface'ini tanımla
+interface ActivityCardProps {
+  activity: Activity;
+  onPress: (activityId: string) => void;
+  isSelected?: boolean;
+  showActions?: boolean;
+}
+
+// ✅ SONRA: Component'i yaz
+const ActivityCard: React.FC<ActivityCardProps> = ({ 
+  activity, 
+  onPress, 
+  isSelected = false, 
+  showActions = true 
+}) => {
+  // Implementation
+};
+
+// ❌ YANLIŞ: Props tanımlanmadan component yazmak
+const ActivityCard = ({ activity, onPress }) => {
+  // Bu kod tip güvenliği sağlamaz
+};
+```
+
+#### 3. API Response Tiplerini Önceden Tanımlama
+```typescript
+// ✅ ÖNCE: API response tiplerini tanımla
+interface APIResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  errors?: string[];
+}
+
+interface ProgramResponse {
+  id: string;
+  title: string;
+  description: string;
+  activities: Activity[];
+  totalCost: number;
+  createdAt: string;
+}
+
+// ✅ SONRA: Service fonksiyonunu yaz
+const createProgram = async (programData: CreateProgramRequest): Promise<APIResponse<ProgramResponse>> => {
+  // Implementation
+};
+```
+
+### B. Hata Önleme Kod Şablonları
+
+#### 1. React Hook Kullanımı Şablonu
+```typescript
+// ✅ DOĞRU ŞABLON: Hook'ları en üstte topla
+const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
+  // 1. Tüm Hook'ları en üstte tanımla
+  const navigation = useNavigation();
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('black', 'white');
+  
+  // 2. State'leri grupla
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DataType | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  // 3. Callback'leri memoize et
+  const handlePress = useCallback(() => {
+    // Implementation
+  }, []);
+  
+  // 4. Effect'leri en son tanımla
+  useEffect(() => {
+    // Implementation
+  }, []);
+  
+  // 5. Early return'ler
+  if (loading) return <Spinner />;
+  if (error) return <ErrorComponent message={error} />;
+  
+  // 6. Ana render
+  return (
+    <Box bg={bgColor}>
+      <Text color={textColor}>Content</Text>
+    </Box>
+  );
+};
+```
+
+#### 2. API Service Fonksiyon Şablonu
+```typescript
+// ✅ DOĞRU ŞABLON: Hata yönetimi ile API fonksiyonu
+const apiServiceTemplate = async <T, R>(
+  endpoint: string,
+  data: T,
+  options?: RequestOptions
+): Promise<APIResponse<R>> => {
+  try {
+    // 1. Input validation
+    if (!endpoint) {
+      throw new AppError('Endpoint is required', 'INVALID_ENDPOINT');
+    }
+    
+    // 2. Request preparation
+    const config = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+      },
+      body: JSON.stringify(data)
+    };
+    
+    // 3. API call
+    const response = await fetch(endpoint, config);
+    
+    // 4. Response validation
+    if (!response.ok) {
+      throw new AppError(
+        `API Error: ${response.status}`,
+        'API_ERROR',
+        'high'
+      );
+    }
+    
+    // 5. Data parsing
+    const result = await response.json() as APIResponse<R>;
+    
+    // 6. Success return
+    return result;
+    
+  } catch (error) {
+    // 7. Error handling
+    console.error('API Service Error:', error);
+    return {
+      success: false,
+      data: {} as R,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+```
+
+### C. Linter Hatalarını Önleme Stratejileri
+
+#### 1. ESLint Kurallarına Uygun Kod Yazma
+```typescript
+// ✅ DOĞRU: ESLint kurallarına uygun
+interface ComponentProps {
+  title: string;
+  onPress: () => void;
+}
+
+const MyComponent: React.FC<ComponentProps> = ({ title, onPress }) => {
+  // Kullanılan tüm değişkenler tanımlanmış
+  const handlePress = useCallback(() => {
+    onPress();
+  }, [onPress]);
+  
+  return (
+    <Button onPress={handlePress}>
+      {title}
+    </Button>
+  );
+};
+
+// ❌ YANLIŞ: ESLint hataları
+const BadComponent = ({ title, onPress, unusedProp }) => {
+  const unusedVariable = 'not used'; // ESLint hatası!
+  const handlePress = () => {
+    onPress();
+  }; // useCallback eksik, dependency array yok
+  
+  return <Button onPress={handlePress}>{title}</Button>;
+};
+```
+
+#### 2. Import/Export Optimizasyonu
+```typescript
+// ✅ DOĞRU: Sadece kullanılan import'lar
+import React, { useState, useCallback } from 'react';
+import { Box, Text, Button } from 'native-base';
+import { useNavigation } from '@react-navigation/native';
+
+// ❌ YANLIŞ: Kullanılmayan import'lar
+import React, { useState, useCallback, useEffect, useMemo } from 'react'; // useEffect, useMemo kullanılmıyor
+import { Box, Text, Button, Modal, VStack, HStack } from 'native-base'; // Modal, VStack, HStack kullanılmıyor
+```
+
+### D. Kod Kalitesi Kontrol Araçları
+
+#### 1. Pre-commit Hook Kurulumu
+```bash
+# package.json'a ekle
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run quality:check"
+    }
+  },
+  "scripts": {
+    "quality:check": "npm run lint:check && npm run type:check",
+    "lint:check": "eslint 'src/**/*.{ts,tsx}' --max-warnings 0",
+    "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "type:check": "tsc --noEmit",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'",
+    "format:fix": "prettier --write 'src/**/*.{ts,tsx}'"
+  }
+}
+```
+
+#### 2. VSCode Ayarları
+```json
+// .vscode/settings.json
+{
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": true
+  },
+  "editor.formatOnSave": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ]
+}
+```
+
+### E. Hata Önleme Checklist'i
+
+#### Kod Yazma Öncesi (5 dakika)
+- [ ] Interface/tip tanımlamaları yapıldı mı?
+- [ ] Component props tanımlandı mı?
+- [ ] API response tipleri hazır mı?
+- [ ] Hook kullanım sırası planlandı mı?
+- [ ] Error handling stratejisi belirlendi mi?
+
+#### Kod Yazma Sırası (Her 15 dakikada)
+- [ ] TypeScript kontrolü: `npx tsc --noEmit`
+- [ ] ESLint kontrolü: `npx eslint src/path/to/file.tsx`
+- [ ] Kullanılmayan import'lar temizlendi mi?
+- [ ] Hook dependency array'leri doğru mu?
+- [ ] Console.log'lar temizlendi mi?
+
+#### Kod Tamamlama Sonrası (Commit öncesi)
+- [ ] Tüm TypeScript hataları çözüldü mü?
+- [ ] ESLint uyarıları giderildi mi?
+- [ ] Prettier formatlaması yapıldı mı?
+- [ ] Fonksiyonalite test edildi mi?
+- [ ] Commit mesajı anlamlı mı?
+
+### F. Yaygın Hataları Önleme Kılavuzu
+
+#### 1. React Native Specific Hatalar
+```typescript
+// ✅ DOĞRU: Platform kontrolü
+import { Platform } from 'react-native';
+
+const styles = StyleSheet.create({
+  container: {
+    paddingTop: Platform.OS === 'ios' ? 44 : 0,
+  }
+});
+
+// ✅ DOĞRU: Safe area kullanımı
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const MyComponent = () => {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <Box pt={insets.top}>
+      {/* Content */}
+    </Box>
+  );
+};
+```
+
+#### 2. NativeBase Specific Hatalar
+```typescript
+// ✅ DOĞRU: NativeBase prop kullanımı
+<Checkbox 
+  value="option1" 
+  onChange={(isChecked: boolean) => handleChange(isChecked)}
+>
+  Option 1
+</Checkbox>
+
+// ❌ YANLIŞ: React Native Checkbox prop'u kullanmak
+<Checkbox 
+  value={true} 
+  onValueChange={(value) => handleChange(value)} // NativeBase'de yok!
+/>
+```
+
+#### 3. Navigation Hatalarını Önleme
+```typescript
+// ✅ DOĞRU: Tip güvenli navigation
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../types/navigation';
+
+type ScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ScreenName'>;
+
+const MyScreen = () => {
+  const navigation = useNavigation<ScreenNavigationProp>();
+  
+  const handleNavigate = () => {
+    navigation.navigate('OtherScreen', { param: 'value' });
+  };
+};
+```
+
+### G. Performans Odaklı Kod Yazma
+
+#### 1. Gereksiz Re-render'ları Önleme
+```typescript
+// ✅ DOĞRU: Memoization kullanımı
+const ExpensiveComponent = memo(({ data, onPress }: Props) => {
+  const processedData = useMemo(() => {
+    return data.map(item => ({ ...item, processed: true }));
+  }, [data]);
+  
+  const handlePress = useCallback((id: string) => {
+    onPress(id);
+  }, [onPress]);
+  
+  return (
+    <VStack>
+      {processedData.map(item => (
+        <TouchableOpacity key={item.id} onPress={() => handlePress(item.id)}>
+          <Text>{item.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </VStack>
+  );
+});
+```
+
+#### 2. Bundle Size Optimizasyonu
+```typescript
+// ✅ DOĞRU: Tree-shaking friendly import'lar
+import { debounce } from 'lodash/debounce';
+import { format } from 'date-fns/format';
+
+// ❌ YANLIŞ: Tüm library'yi import etmek
+import _ from 'lodash';
+import * as dateFns from 'date-fns';
+```
+
+### H. Debugging ve Monitoring Stratejileri
+
+#### 1. Structured Logging
+```typescript
+// ✅ DOĞRU: Structured logging sistemi
+const logger = {
+  debug: (message: string, data?: any) => {
+    if (__DEV__) {
+      console.log(`🐛 [DEBUG] ${message}`, data);
+    }
+  },
+  info: (message: string, data?: any) => {
+    console.log(`ℹ️ [INFO] ${message}`, data);
+  },
+  warn: (message: string, data?: any) => {
+    console.warn(`⚠️ [WARN] ${message}`, data);
+  },
+  error: (message: string, error?: any) => {
+    console.error(`❌ [ERROR] ${message}`, error);
+    // Send to crash reporting service
+  }
+};
+
+// Kullanım
+logger.debug('User action', { userId, action: 'button_press' });
+logger.error('API call failed', error);
+```
+
+#### 2. Performance Monitoring
+```typescript
+// ✅ DOĞRU: Performance tracking
+const usePerformanceTracker = (componentName: string) => {
+  useEffect(() => {
+    const startTime = performance.now();
+    
+    return () => {
+      const endTime = performance.now();
+      const renderTime = endTime - startTime;
+      
+      if (renderTime > 100) {
+        logger.warn(`Slow render detected`, {
+          component: componentName,
+          renderTime: `${renderTime.toFixed(2)}ms`
+        });
+      }
+    };
+  }, [componentName]);
+};
+```
+
+## 13. Kritik Hatalar ve Çözümleri Database
+
+### A. En Sık Karşılaşılan TypeScript Hataları
+
+1. **Property does not exist on type**
+   - **Neden**: Interface eksik veya yanlış tanımlanmış
+   - **Çözüm**: Interface'i güncelleyerek eksik property'leri ekle
+
+2. **Cannot find module**
+   - **Neden**: Import path yanlış veya dosya mevcut değil
+   - **Çözüm**: Path'i kontrol et, dosyanın varlığını doğrula
+
+3. **Type 'undefined' is not assignable**
+   - **Neden**: Optional property'ler için null check eksik
+   - **Çözüm**: Optional chaining (?.) veya null check kullan
+
+4. **React Hook useEffect has missing dependencies**
+   - **Neden**: Dependency array eksik veya yanlış
+   - **Çözüm**: ESLint önerisini takip et, tüm dependencies'i ekle
+
+### B. En Sık Karşılaşılan ESLint Hataları
+
+1. **'variable' is assigned a value but never used**
+   - **Çözüm**: Kullanılmayan değişkeni sil veya kullan
+
+2. **React Hook "useCallback" has missing dependencies**
+   - **Çözüm**: Dependency array'e eksik değişkenleri ekle
+
+3. **'Component' is not defined**
+   - **Çözüm**: Import statement'ı ekle
+
+4. **Expected '===' and instead saw '=='**
+   - **Çözüm**: Strict equality (===) kullan
+
+### C. Hızlı Çözüm Komutları
+
+```bash
+# Tüm TypeScript hatalarını kontrol et
+npx tsc --noEmit
+
+# ESLint hatalarını otomatik düzelt
+npx eslint "src/**/*.{ts,tsx}" --fix
+
+# Prettier ile formatla
+npx prettier --write "src/**/*.{ts,tsx}"
+
+# Kullanılmayan import'ları temizle
+npx eslint "src/**/*.{ts,tsx}" --fix --rule "unused-imports/no-unused-imports: error"
+
+# Tüm kalite kontrolleri
+npm run quality:check
+```
+
 ---
 
 *Bu doküman AdVantage projesi geliştirme sürecinde edinilen deneyimlerden oluşturulmuştur.*
-*Son Güncelleme: Ocak 2025 - TypeScript Hata Düzeltmeleri ve İleri Düzey Optimizasyonlar*
+*Son Güncelleme: Ocak 2025 - Hatalı Kod Yazımını Engelleyen Proaktif Stratejiler Eklendi*

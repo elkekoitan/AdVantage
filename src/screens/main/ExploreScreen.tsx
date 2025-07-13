@@ -17,7 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LocationBasedSuggestions from '../../components/LocationBasedSuggestions';
 import { openRouteService } from '../../services/openRouteService';
 import * as Location from 'expo-location';
-import type { MainStackParamList } from '../../navigation/MainNavigator';
+import type { MainStackParamList } from '../../types/navigation';
 
 // Design system
 const colors = {

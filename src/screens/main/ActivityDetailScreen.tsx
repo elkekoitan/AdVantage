@@ -27,7 +27,7 @@ import {
 } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, NavigationProp } from '@react-navigation/native';
-import { MainStackParamList } from '../../navigation/MainNavigator';
+import { MainStackParamList } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
 // import { formatDistanceToNow } from 'date-fns';

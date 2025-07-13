@@ -2,17 +2,6 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-// Define PlaceResult type locally until googleMapsService is implemented
-type PlaceResult = {
-  id: string;
-  name: string;
-  address: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-};
-
 // Import main screens
 import { HomeScreen } from '../screens/main/HomeScreen';
 import ExploreScreen from '../screens/main/ExploreScreen';
@@ -24,6 +13,12 @@ import { NotificationsScreen } from '../screens/main/NotificationsScreen';
 import { ChatScreen } from '../screens/main/ChatScreen';
 import { ActivityDetailScreen } from '../screens/main/ActivityDetailScreen';
 
+// Import new feature components
+import ConversationsList from '../components/messaging/ConversationsList';
+import MessagesList from '../components/messaging/MessagesList';
+import FavoritesList from '../components/favorites/FavoritesList';
+import CollaborationList from '../components/collaboration/CollaborationList';
+
 // Import stack screens
 import { ProgramDetailsScreen } from '../screens/programs/ProgramDetailsScreen';
 import { CreateProgramScreen } from '../screens/programs/CreateProgramScreen';
@@ -31,31 +26,8 @@ import { CompanyDetailsScreen } from '../screens/companies/CompanyDetailsScreen'
 import { CampaignDetailsScreen } from '../screens/campaigns/CampaignDetailsScreen';
 import SocialShareScreen from '../screens/social/SocialShareScreen';
 
-// Type definitions
-export type MainTabParamList = {
-  Home: undefined;
-  Explore: undefined;
-  Program: undefined;
-  Profile: undefined;
-};
-
-export type MainStackParamList = {
-  MainTabs: undefined;
-  ProgramDetails: { programId: string };
-  CreateProgram: { date?: string };
-  CompanyDetails: { companyId: string };
-  CampaignDetails: { campaignId: string };
-  Map: { 
-    initialLocation?: { latitude: number; longitude: number };
-    searchQuery?: string;
-    places?: PlaceResult[];
-  };
-  Settings: undefined;
-  Notifications: undefined;
-  Chat: { chatId?: string; chatType?: 'direct' | 'group' | 'program'; participantId?: string; programId?: string };
-  ActivityDetail: { activityId: string };
-  SocialShare: { program: { id: string; title: string; description: string; activities: Array<{ id: string; title: string; }> } };
-};
+// Import types
+import { MainTabParamList, MainStackParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -105,6 +77,36 @@ const MainTabs = () => {
           tabBarLabel: 'Programım',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="calendar-clock" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Messages"
+        component={ConversationsList}
+        options={{
+          tabBarLabel: 'Mesajlar',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="message" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Favorites"
+        component={FavoritesList}
+        options={{
+          tabBarLabel: 'Favoriler',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="favorite" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Collaboration"
+        component={CollaborationList}
+        options={{
+          tabBarLabel: 'İşbirliği',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="handshake" size={size} color={color} />
           ),
         }}
       />
@@ -226,6 +228,38 @@ export const MainNavigator = () => {
           animation: 'slide_from_bottom',
           presentation: 'modal',
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="ConversationDetail"
+        component={({ route }: any) => <MessagesList conversationId={route.params?.conversationId || ''} />}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Sohbet',
+        }}
+      />
+      <Stack.Screen
+        name="FavoriteDetail"
+        component={FavoritesList}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Favori Detayı',
+        }}
+      />
+      <Stack.Screen
+        name="CollaborationDetail"
+        component={CollaborationList}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'İşbirliği Detayı',
+        }}
+      />
+      <Stack.Screen
+        name="EventDetail"
+        component={CollaborationList}
+        options={{
+          animation: 'slide_from_right',
+          headerTitle: 'Etkinlik Detayı',
         }}
       />
     </Stack.Navigator>

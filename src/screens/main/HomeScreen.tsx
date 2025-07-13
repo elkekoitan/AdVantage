@@ -26,7 +26,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
-import type { MainStackParamList, MainTabParamList } from '../../navigation/MainNavigator';
+import type { MainStackParamList, MainTabParamList } from '../../types/navigation';
 import { Card } from '../../components/ui/Card';
 import { VoiceAgent } from '../../components/VoiceAgent';
 import { TimelineView } from '../../components/TimelineView';
@@ -404,7 +404,61 @@ export const HomeScreen = () => {
                 
                 <Pressable
                   flex={1}
-                  onPress={() => navigation.navigate('Explore')}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Messages' })}
+                  _pressed={{ opacity: 0.8 }}
+                >
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="blue.100" p={3} rounded="full">
+                        <MaterialIcons name="message" size={24} color={theme.colors.blue[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Mesajlar
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Favorites' })}
+                  _pressed={{ opacity: 0.8 }}
+                >
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="red.100" p={3} rounded="full">
+                        <MaterialIcons name="favorite" size={24} color={theme.colors.red[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        Favoriler
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+                
+                <Pressable
+                  flex={1}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Collaboration' })}
+                  _pressed={{ opacity: 0.8 }}
+                >
+                  <Card variant="glass" padding={4}>
+                    <VStack space={2} alignItems="center">
+                      <Box bg="green.100" p={3} rounded="full">
+                        <MaterialIcons name="handshake" size={24} color={theme.colors.green[500]} />
+                      </Box>
+                      <Text fontSize="xs" color={textColor} textAlign="center" fontWeight="500">
+                        İşbirliği
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Pressable>
+              </HStack>
+              
+              {/* Second row of quick actions */}
+              <HStack space={3} justifyContent="space-between">
+                <Pressable
+                  flex={1}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Explore' })}
                   _pressed={{ opacity: 0.8 }}
                 >
                   <Card variant="glass" padding={4}>
@@ -421,7 +475,7 @@ export const HomeScreen = () => {
                 
                 <Pressable
                   flex={1}
-                  onPress={() => navigation.navigate('Program')}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Program' })}
                   _pressed={{ opacity: 0.8 }}
                 >
                   <Card variant="glass" padding={4}>
@@ -438,7 +492,7 @@ export const HomeScreen = () => {
                 
                 <Pressable
                   flex={1}
-                  onPress={() => navigation.navigate('Profile')}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
                   _pressed={{ opacity: 0.8 }}
                 >
                   <Card variant="glass" padding={4}>
@@ -452,6 +506,8 @@ export const HomeScreen = () => {
                     </VStack>
                   </Card>
                 </Pressable>
+                
+                <Box flex={1} /> {/* Empty space for alignment */}
               </HStack>
               
               {/* AI Assistant Quick Actions */}

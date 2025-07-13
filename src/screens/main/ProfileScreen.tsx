@@ -46,7 +46,7 @@ const colors = {
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../../navigation/MainNavigator';
+import type { MainStackParamList } from '../../types/navigation';
 
 interface UserProfile {
   id: string;
@@ -487,6 +487,60 @@ export const ProfileScreen = () => {
                   </Text>
                   <Text fontSize="sm" color="gray.500">
                     Push bildirimleri ve e-posta ayarları
+                  </Text>
+                </VStack>
+                <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />
+              </HStack>
+            </Pressable>
+            <Divider />
+            <Pressable
+              p={4}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Messages' })}
+            >
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="message" size={6} color="gray.500" />
+                <VStack flex={1} ml={3}>
+                  <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
+                    Mesajlarım
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    Konuşmalar ve mesaj geçmişi
+                  </Text>
+                </VStack>
+                <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />
+              </HStack>
+            </Pressable>
+            <Divider />
+            <Pressable
+              p={4}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Favorites' })}
+            >
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="favorite" size={6} color="gray.500" />
+                <VStack flex={1} ml={3}>
+                  <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
+                    Favorilerim
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    Beğendiğim yerler, etkinlikler ve ürünler
+                  </Text>
+                </VStack>
+                <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />
+              </HStack>
+            </Pressable>
+            <Divider />
+            <Pressable
+              p={4}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Collaboration' })}
+            >
+              <HStack alignItems="center">
+                <Icon as={MaterialIcons} name="handshake" size={6} color="gray.500" />
+                <VStack flex={1} ml={3}>
+                  <Text fontSize="md" fontWeight="600" color={colors.text} mb={0.5}>
+                    İşbirliklerim
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    Ortaklıklar ve ortak etkinlikler
                   </Text>
                 </VStack>
                 <Icon as={MaterialIcons} name="chevron-right" size={5} color="gray.400" />

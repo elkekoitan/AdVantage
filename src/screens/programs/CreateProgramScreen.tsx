@@ -28,7 +28,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
-import { MainStackParamList } from '../../navigation/MainNavigator';
+import { MainStackParamList } from '../../types/navigation';
+import { GeminiService } from '../../services/gemini';
 
 type CreateProgramScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'CreateProgram'>;
 
@@ -144,59 +145,46 @@ export const CreateProgramScreen = () => {
 
     setAiLoading(true);
     try {
-      // Simulate AI recommendation generation
-      // In real implementation, this would call Google Gemini API
-      await new Promise<void>((resolve) => setTimeout(resolve, 2000));
+      const geminiService = GeminiService.getInstance();
+      
+      // Create user preferences from form data
+      const userPreferences = {
+        age: 25, // Default or get from user profile
+        gender: 'unspecified',
+        interests: [formData.category],
+        preferred_cuisines: formData.preferences.cuisine_type ? [formData.preferences.cuisine_type] : [],
+        activity_types: [formData.preferences.activity_level || 'medium'],
+      };
 
-      const mockRecommendations: AIRecommendation[] = [
-        {
-          id: '1',
-          type: 'restaurant',
-          name: 'Lokanta Maya',
-          description: 'Modern Türk mutfağı deneyimi',
-          estimated_cost: 150,
-          duration: 2,
-          location: formData.location,
-          rating: 4.5,
-          reason: 'Bütçenize uygun ve kaliteli yemek deneyimi',
-        },
-        {
-          id: '2',
-          type: 'activity',
-          name: 'Şehir Turu',
-          description: 'Rehberli şehir keşif turu',
-          estimated_cost: 80,
-          duration: 3,
-          location: formData.location,
-          rating: 4.2,
-          reason: 'Seçtiğiniz süreye uygun aktivite',
-        },
-        {
-          id: '3',
-          type: 'entertainment',
-          name: 'Sinema',
-          description: 'En yeni filmleri izleyin',
-          estimated_cost: 60,
-          duration: 2.5,
-          location: formData.location,
-          rating: 4.0,
-          reason: 'Rahatlatıcı eğlence seçeneği',
-        },
-        {
-          id: '4',
-          type: 'shopping',
-          name: 'AVM Gezisi',
-          description: 'Alışveriş ve kafeler',
-          estimated_cost: 200,
-          duration: 4,
-          location: formData.location,
-          rating: 3.8,
-          reason: 'Çeşitli aktivite seçenekleri',
-        },
-      ];
+      // Generate AI-powered program
+      const aiProgram = await geminiService.generateDailyProgram({
+        user_preferences: userPreferences,
+        date: formData.date,
+        location: formData.location,
+        budget: formData.budget,
+        duration: `${formData.duration} saat`,
+        group_size: formData.participants,
+      });
 
-      setAiRecommendations(mockRecommendations);
-      setShowAiRecommendations(true);
+      if (aiProgram && aiProgram.activities) {
+        // Convert AI program activities to our recommendation format
+        const recommendations: AIRecommendation[] = aiProgram.activities.map((activity, index) => ({
+          id: (index + 1).toString(),
+          type: activity.type as 'restaurant' | 'activity' | 'shopping' | 'entertainment',
+          name: activity.title,
+          description: activity.description,
+          estimated_cost: activity.estimated_cost,
+          duration: parseFloat(activity.estimated_duration.replace(/[^0-9.]/g, '')) || 2,
+          location: formData.location,
+          rating: 4.0 + Math.random() * 1, // Generate random rating between 4-5
+          reason: `AI önerisi: ${activity.time_of_day} için uygun`,
+        }));
+
+        setAiRecommendations(recommendations);
+        setShowAiRecommendations(true);
+      } else {
+        throw new Error('AI önerileri oluşturulamadı');
+      }
 
       toast.show({
         title: 'AI Önerileri Hazır!',

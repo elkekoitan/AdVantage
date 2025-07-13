@@ -569,6 +569,231 @@ export interface IsochroneResponse {
   };
 }
 
+// Messaging & Communication Types
+export interface Message {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  conversation_id: string;
+  message_type: 'text' | 'image' | 'video' | 'audio' | 'location' | 'program_share' | 'business_share';
+  content?: string;
+  media_url?: string;
+  metadata: Record<string, any>;
+  read_at?: string;
+  edited_at?: string;
+  deleted_at?: string;
+  reply_to_id?: string;
+  created_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  conversation_type: 'direct' | 'group' | 'business';
+  title?: string;
+  description?: string;
+  avatar_url?: string;
+  created_by: string;
+  last_message_id?: string;
+  last_message?: string;
+  last_message_at?: string;
+  last_activity_at: string;
+  unread_count?: number;
+  is_muted?: boolean;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationParticipant {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: 'admin' | 'moderator' | 'member';
+  joined_at: string;
+  left_at?: string;
+  muted: boolean;
+  last_read_message_id?: string;
+}
+
+export interface ConversationListItem {
+  id: string;
+  conversation_type: 'direct' | 'group' | 'business';
+  type: 'direct' | 'group' | 'business';
+  title?: string;
+  avatar_url?: string;
+  last_activity_at: string;
+  last_message_at?: string;
+  user_id: string;
+  muted: boolean;
+  last_read_message_id?: string;
+  last_message?: string;
+  last_message_content?: string;
+  last_message_sender_id?: string;
+  last_message_sender_name?: string;
+  unread_count?: number;
+  is_muted?: boolean;
+  participant_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Favorites Types
+export interface UserFavorite {
+  id: string;
+  user_id: string;
+  favorite_type: 'program' | 'company' | 'activity' | 'campaign' | 'user';
+  favorite_id: string;
+  notes?: string;
+  tags?: string[];
+  created_at: string;
+}
+
+export interface UserFavoriteDetailed extends UserFavorite {
+  favorite_name?: string;
+  favorite_image?: string;
+}
+
+// User Connections Types
+export interface UserConnection {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  requester_id: string;
+  user_id: string;
+  requester_name?: string;
+  target_name?: string;
+  connection_type: 'follow' | 'friend' | 'block';
+  status: 'pending' | 'active' | 'blocked' | 'accepted';
+  message?: string;
+  created_at: string;
+}
+
+// Business Collaboration Types
+export interface BusinessCollaboration {
+  id: string;
+  initiator_company_id: string;
+  partner_company_id: string;
+  collaboration_type: 'joint_event' | 'cross_promotion' | 'package_deal' | 'referral_program' | 'shared_campaign';
+  title: string;
+  description?: string;
+  terms: Record<string, any>;
+  revenue_split: Record<string, number>;
+  start_date: string;
+  end_date?: string;
+  status: 'proposed' | 'negotiating' | 'active' | 'paused' | 'completed' | 'cancelled';
+  performance_metrics: Record<string, any>;
+  requirements?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollaborativeEvent {
+  id: string;
+  collaboration_id: string;
+  title: string;
+  description?: string;
+  event_type: 'workshop' | 'festival' | 'promotion' | 'contest' | 'networking' | 'charity';
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  address?: string;
+  start_date: string;
+  end_date: string;
+  max_participants?: number;
+  current_participants: number;
+  registration_fee: number;
+  requirements: Record<string, any>;
+  media_urls?: string[];
+  status: 'planning' | 'published' | 'active' | 'completed' | 'cancelled';
+  metadata: Record<string, any>;
+  is_participant?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventParticipant {
+  id: string;
+  event_id: string;
+  user_id: string;
+  registration_date: string;
+  attendance_status: 'registered' | 'confirmed' | 'attended' | 'no_show' | 'cancelled';
+  payment_status: 'pending' | 'paid' | 'refunded' | 'waived';
+  special_requirements?: string;
+  feedback_rating?: number;
+  feedback_comment?: string;
+  created_at: string;
+}
+
+export interface PartnershipRequest {
+  id: string;
+  from_company_id: string;
+  to_company_id: string;
+  request_type: 'collaboration' | 'sponsorship' | 'vendor' | 'affiliate';
+  requester_type?: string;
+  requester_name?: string;
+  target_name?: string;
+  message?: string;
+  proposed_terms: Record<string, any>;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  response_message?: string;
+  expires_at: string;
+  created_at: string;
+  responded_at?: string;
+}
+
+// Form Types for Creating/Updating
+export interface CreateMessageForm {
+  recipient_id: string;
+  conversation_id?: string;
+  message_type?: 'text' | 'image' | 'video' | 'audio' | 'location' | 'program_share' | 'business_share';
+  content?: string;
+  media_url?: string;
+  reply_to_id?: string;
+}
+
+export interface CreateConversationForm {
+  conversation_type: 'direct' | 'group' | 'business';
+  title?: string;
+  description?: string;
+  participant_ids: string[];
+}
+
+export interface CreateCollaborationForm {
+  partner_company_id: string;
+  collaboration_type: 'joint_event' | 'cross_promotion' | 'package_deal' | 'referral_program' | 'shared_campaign';
+  title: string;
+  description?: string;
+  terms: Record<string, any>;
+  revenue_split: Record<string, number>;
+  start_date: string;
+  end_date?: string;
+}
+
+export interface CreateEventForm {
+  collaboration_id: string;
+  title: string;
+  description?: string;
+  event_type: 'workshop' | 'festival' | 'promotion' | 'contest' | 'networking' | 'charity';
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  address?: string;
+  start_date: string;
+  end_date: string;
+  max_participants?: number;
+  registration_fee?: number;
+  requirements?: Record<string, any>;
+}
+
+export interface CreatePartnershipRequestForm {
+  to_company_id: string;
+  request_type: 'collaboration' | 'sponsorship' | 'vendor' | 'affiliate';
+  message?: string;
+  proposed_terms: Record<string, any>;
+}
+
 // Utility Types
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;

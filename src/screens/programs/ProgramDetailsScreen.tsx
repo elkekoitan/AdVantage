@@ -31,7 +31,7 @@ import { RefreshControl } from 'react-native';
 
 // Remove unused import
 import { supabase } from '../../services/supabase';
-import { MainStackParamList } from '../../navigation/MainNavigator';
+import { MainStackParamList } from '../../types/navigation';
 
 type ProgramDetailsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ProgramDetails'>;
 type ProgramDetailsScreenRouteProp = RouteProp<{ ProgramDetails: { programId: string } }, 'ProgramDetails'>;
