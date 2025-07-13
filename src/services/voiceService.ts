@@ -149,7 +149,7 @@ class VoiceService {
   }
 
   // Mock speech-to-text conversion (would integrate with actual service)
-  async convertSpeechToText(_audioUri: string): Promise<string> {
+  async convertSpeechToText(): Promise<string> {
     // This would integrate with Google Speech-to-Text, Azure Speech, or similar
     // For now, return a mock response
     return new Promise((resolve) => {

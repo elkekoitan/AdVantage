@@ -305,7 +305,7 @@ class GoogleMapsService {
    * Get photo URL from photo reference
    * Note: Photo functionality not available with OpenRouteService
    */
-  getPhotoUrl(_photoReference: string, _maxWidth: number = 400): string {
+  getPhotoUrl(): string {
     // Photo functionality not available with OpenRouteService
     return '';
   }

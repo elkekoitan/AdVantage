@@ -199,7 +199,6 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
                 colorScheme="primary"
                 size="lg"
                 variant="solid"
-                leftIcon="local-offer"
               />
               <Badge
                 label={getStatusText()}
@@ -302,7 +301,6 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
               colorScheme="primary"
               size="md"
               variant="solid"
-              leftIcon="local-offer"
             />
             <Badge
               label={getStatusText()}

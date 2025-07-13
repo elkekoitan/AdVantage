@@ -92,13 +92,13 @@ class AIAssistantService {
   ): Promise<{
     response: string;
     timeline?: DailyTimeline;
-    recommendations?: any[];
+    recommendations?: Record<string, unknown>[];
     actions?: string[];
   }> {
     try {
       // Get or create conversation context
       const sessionId = context?.sessionId || this.generateSessionId();
-      let conversation = this.conversationHistory.get(sessionId) || {
+      const conversation = this.conversationHistory.get(sessionId) || {
         userId,
         sessionId,
         messages: [],
@@ -119,8 +119,8 @@ class AIAssistantService {
 
       let response = '';
       let timeline: DailyTimeline | undefined;
-      let recommendations: any[] = [];
-      let actions: string[] = [];
+      let recommendations: Record<string, unknown>[] = [];
+      const actions: string[] = [];
 
       // Process based on intent
       switch (intent.type) {
@@ -136,14 +136,16 @@ class AIAssistantService {
           actions.push('show_recommendations');
           break;
 
-        case 'discount_inquiry':
+
+        case 'discount_inquiry': {
           const discounts = await this.getActiveDiscounts(userId, intent.category);
           response = this.generateDiscountResponse(discounts);
           actions.push('show_discounts');
           break;
+        }
 
         case 'mood_support':
-          response = await this.generateMoodSupportResponse(mood, conversation.preferences!);
+          response = await this.generateMoodSupportResponse(mood);
           recommendations = await this.getMoodBasedRecommendations(mood, userId);
           actions.push('show_mood_support');
           break;
@@ -258,35 +260,85 @@ class AIAssistantService {
       const program = await geminiService.generateDailyProgram(aiRequest);
       
       if (program) {
+        interface ProgramActivity {
+          title?: string;
+          description?: string;
+          start_time?: string;
+          end_time?: string;
+          type?: string;
+          location?: string | {
+            name?: string;
+            address?: string;
+            latitude?: number;
+            longitude?: number;
+          };
+          estimated_cost?: number;
+          discount?: {
+            percentage?: number;
+            description?: string;
+            validUntil?: string;
+          };
+        }
+
         const timeline: DailyTimeline = {
           date: today,
-          activities: program.activities.map((activity: any, index: number): TimelineActivity => ({
-            id: (index + 1).toString(),
-            title: activity.title,
-            description: activity.description,
-            startTime: activity.start_time,
-            endTime: activity.end_time,
-            type: activity.type,
-            location: activity.location ? {
-              name: activity.location.name,
-              address: activity.location.address,
-              latitude: activity.location.latitude,
-              longitude: activity.location.longitude
-            } : undefined,
-            budget: {
-              min: activity.estimated_cost * 0.8,
-              max: activity.estimated_cost,
-              currency: 'TL'
-            },
-            discount: activity.discount,
-            mood: mood as 'energetic' | 'relaxed' | 'social' | 'productive' | 'creative'
-          })),
-          totalBudget: program.total_estimated_cost,
-          estimatedSavings: (program as any).estimated_savings || 0,
+          activities: program.activities.map((activity: ProgramActivity, index: number): TimelineActivity => {
+            const estimatedCost = Number(activity.estimated_cost || 0);
+            let locationObj: { name: string; address: string; latitude: number; longitude: number; } | undefined;
+            
+            if (activity.location) {
+              if (typeof activity.location === 'string') {
+                locationObj = {
+                  name: activity.location,
+                  address: activity.location,
+                  latitude: 0,
+                  longitude: 0
+                };
+              } else {
+                locationObj = {
+                  name: String(activity.location.name || ''),
+                  address: String(activity.location.address || ''),
+                  latitude: Number(activity.location.latitude || 0),
+                  longitude: Number(activity.location.longitude || 0)
+                };
+              }
+            }
+            
+            let discountObj: { percentage: number; description: string; validUntil: string; } | undefined;
+            if (activity.discount && 
+                typeof activity.discount.percentage === 'number' &&
+                typeof activity.discount.description === 'string' &&
+                typeof activity.discount.validUntil === 'string') {
+              discountObj = {
+                percentage: activity.discount.percentage,
+                description: activity.discount.description,
+                validUntil: activity.discount.validUntil
+              };
+            }
+            
+            return {
+              id: (index + 1).toString(),
+              title: String(activity.title || ''),
+              description: String(activity.description || ''),
+              startTime: String(activity.start_time || ''),
+              endTime: String(activity.end_time || ''),
+              type: (activity.type || 'other') as 'breakfast' | 'sport' | 'shopping' | 'entertainment' | 'work' | 'social' | 'other',
+              location: locationObj,
+              budget: {
+                min: estimatedCost * 0.8,
+                max: estimatedCost,
+                currency: 'TL'
+              },
+              discount: discountObj,
+              mood: mood as 'energetic' | 'relaxed' | 'social' | 'productive' | 'creative'
+            };
+          }),
+          totalBudget: Number(program.total_estimated_cost || 0),
+          estimatedSavings: Number((program as any).estimated_savings || 0),
           moodAnalysis: {
             primary: mood,
             secondary: 'productive',
-            recommendations: (program as any).recommendations || ['Güne pozitif başlayın']
+            recommendations: Array.isArray((program as any).recommendations) ? (program as any).recommendations as string[] : ['Güne pozitif başlayın']
           }
         };
         
@@ -351,7 +403,7 @@ class AIAssistantService {
       return timeline;
     } catch (error) {
       console.error('Timeline generation error:', error);
-      return this.getDefaultTimeline(today, preferences);
+      return this.getDefaultTimeline(today);
     }
   }
 
@@ -359,7 +411,7 @@ class AIAssistantService {
     userId: string,
     category: string,
     mood: string
-  ): Promise<any[]> {
+  ): Promise<Record<string, unknown>[]> {
     // Get user preferences and location
     const preferences = await this.getUserPreferences(userId);
     
@@ -371,16 +423,16 @@ class AIAssistantService {
         preferences?.budgetRange.max || 500
       );
       
-      return recommendations.map((rec: any) => ({
-        id: rec.id || Math.random().toString(36).substr(2, 9),
-        title: rec.title,
-        description: rec.description,
-        category: rec.category,
-        rating: rec.rating || 4.0,
-        price: rec.price || 0,
-        location: rec.location,
-        discount: rec.discount || 0,
-        tags: rec.tags || []
+      return recommendations.map((rec: Record<string, unknown>) => ({
+        id: String(rec.id || Math.random().toString(36).substr(2, 9)),
+        title: String(rec.title || ''),
+        description: String(rec.description || ''),
+        category: String(rec.category || ''),
+        rating: Number(rec.rating || 4.0),
+        price: Number(rec.price || 0),
+        location: String(rec.location || ''),
+        discount: Number(rec.discount || 0),
+        tags: Array.isArray(rec.tags) ? rec.tags.map(tag => String(tag)) : []
       }));
     } catch (error) {
       console.error('Recommendation generation error:', error);
@@ -431,16 +483,16 @@ class AIAssistantService {
 🎯 Ruh halinize göre özel olarak seçilmiş aktiviteler var. Timeline'ı görmek ister misiniz?`;
   }
 
-  private generateRecommendationResponse(recommendations: any[], category: string): string {
+  private generateRecommendationResponse(recommendations: Record<string, unknown>[], category: string): string {
     const count = recommendations.length;
     return `🎉 ${category} kategorisinde sizin için ${count} harika öneri buldum! Ruh halinize ve tercihlerinize göre özel olarak seçtim. İncelemek ister misiniz?`;
   }
 
-  private generateDiscountResponse(discounts: any[]): string {
+  private generateDiscountResponse(discounts: Record<string, unknown>[]): string {
     if (discounts.length === 0) {
       return '😔 Şu anda aktif bir indirim bulamadım, ama yakında yeni kampanyalar gelecek!';
     }
-    return `🔥 Harika! ${discounts.length} aktif indirim fırsatı buldum. En yüksek indirim %${Math.max(...discounts.map(d => d.percentage))}! Detayları görmek ister misiniz?`;
+    return `🔥 Harika! ${discounts.length} aktif indirim fırsatı buldum. En yüksek indirim %${Math.max(...discounts.map(d => Number(d.percentage || 0)))}! Detayları görmek ister misiniz?`;
   }
 
   private async getUserPreferences(userId: string): Promise<UserPreferences | undefined> {
@@ -479,7 +531,7 @@ class AIAssistantService {
     }
   }
 
-  private async getActiveDiscounts(_userId: string, category?: string): Promise<any[]> {
+  private async getActiveDiscounts(_userId: string, category?: string): Promise<Record<string, unknown>[]> {
     try {
       let query = supabase
         .from('active_discounts')
@@ -499,12 +551,12 @@ class AIAssistantService {
     }
   }
 
-  private async getMoodBasedRecommendations(mood: string, userId: string): Promise<any[]> {
+  private async getMoodBasedRecommendations(mood: string, userId: string): Promise<Record<string, unknown>[]> {
     // Generate mood-specific recommendations
     return this.generateRecommendations(userId, 'mood_support', mood);
   }
 
-  private async generateMoodSupportResponse(mood: string, _preferences: UserPreferences): Promise<string> {
+  private async generateMoodSupportResponse(mood: string): Promise<string> {
     const moodResponses = {
       energetic: '⚡ Enerjinizi hissediyorum! Size aktif aktiviteler önerebilirim.',
       relaxed: '😌 Rahat bir gün geçirmek istiyorsunuz. Sakin aktiviteler buldum.',
@@ -536,7 +588,7 @@ class AIAssistantService {
     }
   }
 
-  private getDefaultTimeline(date: string, _preferences?: UserPreferences): DailyTimeline {
+  private getDefaultTimeline(date: string): DailyTimeline {
     return {
       date,
       activities: [

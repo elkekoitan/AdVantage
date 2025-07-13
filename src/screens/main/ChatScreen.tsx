@@ -14,16 +14,13 @@ import {
   Center,
   KeyboardAvoidingView,
   useToast,
-  // Badge,
-  // Button,
+
 } from 'native-base';
 import { Platform, Keyboard } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabase';
-// import { formatDistanceToNow } from 'date-fns';
-// import { tr } from 'date-fns/locale';
 
 interface Message {
   id: string;
@@ -80,6 +77,8 @@ export const ChatScreen = () => {
   const mutedColor = useColorModeValue('gray.600', 'gray.400');
   const myMessageBg = useColorModeValue('primary.500', 'primary.600');
   const otherMessageBg = useColorModeValue('gray.100', 'gray.700');
+  const loadingBgColor = useColorModeValue('gray.50', 'gray.900');
+  const inputBgColor = useColorModeValue('gray.50', 'gray.700');
 
   useEffect(() => {
     if (params.chatId) {
@@ -144,7 +143,7 @@ export const ChatScreen = () => {
       if (!user) return;
 
       // Check if direct chat already exists
-      const { data: existingChat, error: _findError } = await supabase
+      const { data: existingChat } = await supabase
         .from('chats')
         .select('*')
         .eq('type', 'direct')
@@ -189,7 +188,7 @@ export const ChatScreen = () => {
       setLoading(true);
       
       // Check if program chat already exists
-      const { data: existingChat, error: _findError } = await supabase
+      const { data: existingChat } = await supabase
         .from('chats')
         .select('*')
         .eq('type', 'program')
@@ -438,7 +437,7 @@ export const ChatScreen = () => {
 
   if (loading) {
     return (
-      <Center flex={1} bg={useColorModeValue('gray.50', 'gray.900')}>
+      <Center flex={1} bg={loadingBgColor}>
         <Spinner size="lg" color="primary.500" />
         <Text mt={4} color={mutedColor}>
           Sohbet yükleniyor...
@@ -451,7 +450,7 @@ export const ChatScreen = () => {
     <KeyboardAvoidingView
       flex={1}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      bg={useColorModeValue('gray.50', 'gray.900')}
+      bg={loadingBgColor}
     >
       <VStack flex={1}>
         {/* Chat Header */}
@@ -542,10 +541,10 @@ export const ChatScreen = () => {
               multiline
               maxH={20}
               borderRadius="full"
-              bg={useColorModeValue('gray.100', 'gray.700')}
+              bg={inputBgColor}
               borderWidth={0}
               _focus={{
-                bg: useColorModeValue('gray.100', 'gray.700'),
+                bg: inputBgColor,
               }}
             />
             

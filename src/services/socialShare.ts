@@ -2,8 +2,10 @@ import { supabase } from './supabase';
 import { Share } from 'react-native';
 import { Alert, Linking, Platform } from 'react-native';
 
+import { Program } from '../types';
+
 export interface SocialShareData {
-  program: any;
+  program: Program;
   platforms: string[];
   title: string;
   description: string;
@@ -144,7 +146,7 @@ class SocialShareService {
   }
 
   // Instagram'a yönlendir
-  async shareToInstagram(_shareData: SocialShareData): Promise<boolean> {
+  async shareToInstagram(): Promise<boolean> {
     try {
       const instagramUrl = Platform.select({
         ios: 'instagram://app',
@@ -171,7 +173,7 @@ class SocialShareService {
   }
 
   // Facebook'a yönlendir
-  async shareToFacebook(_shareData: SocialShareData): Promise<boolean> {
+  async shareToFacebook(): Promise<boolean> {
     try {
       const facebookUrl = Platform.select({
         ios: 'fb://profile',
@@ -252,7 +254,7 @@ class SocialShareService {
   }
 
   // TikTok'a yönlendir
-  async shareToTikTok(_shareData: SocialShareData): Promise<boolean> {
+  async shareToTikTok(): Promise<boolean> {
     try {
       const tiktokUrl = Platform.select({
         ios: 'tiktok://app',
@@ -282,16 +284,16 @@ class SocialShareService {
   async shareToPlatform(platform: string, shareData: SocialShareData): Promise<boolean> {
     switch (platform.toLowerCase()) {
       case 'instagram':
-        return await this.shareToInstagram(shareData);
+        return await this.shareToInstagram();
       case 'facebook':
-        return await this.shareToFacebook(shareData);
+        return await this.shareToFacebook();
       case 'twitter':
       case 'x':
         return await this.shareToTwitter(shareData);
       case 'whatsapp':
         return await this.shareToWhatsApp(shareData);
       case 'tiktok':
-        return await this.shareToTikTok(shareData);
+        return await this.shareToTikTok();
       case 'native':
         return await this.shareToNative(shareData);
       default:

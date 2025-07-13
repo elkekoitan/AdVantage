@@ -31,8 +31,10 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
   };
 
   const getProgressPercentage = () => {
-    if (!program.total_budget || program.total_budget === 0) return 0;
-    return Math.round(((program.spent_amount || 0) / program.total_budget) * 100);
+    const totalBudget = Number(program.total_budget || 0);
+    const spentAmount = Number(program.spent_amount || 0);
+    if (!totalBudget || totalBudget === 0) return 0;
+    return Math.round((spentAmount / totalBudget) * 100);
   };
 
   const renderSingleLayout = () => (
@@ -52,7 +54,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
           textAlign="center"
           numberOfLines={2}
         >
-          {program.title}
+          {String(program.title || '')}
         </Heading>
         
         {program.description && (
@@ -63,7 +65,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
             opacity={0.8}
             numberOfLines={3}
           >
-            {program.description}
+            {String(program.description || '')}
           </Text>
         )}
       </VStack>
@@ -79,7 +81,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
               px={3}
               py={1}
             >
-              {formatBudget(program.total_budget)}
+              {formatBudget(Number(program.total_budget || 0))}
             </Badge>
           )}
           
@@ -91,11 +93,11 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
               px={3}
               py={1}
             >
-              {program.activities_count} aktivite
+              {Number(program.activities_count || 0)} aktivite
             </Badge>
           )}
           
-          {program.total_budget > 0 && (
+          {Number(program.total_budget || 0) > 0 && (
             <Badge 
               bg={template.accentColor} 
               _text={{ color: template.textColor, fontSize: 'xs', fontWeight: 'bold' }}
@@ -113,13 +115,13 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
       <VStack space={1} alignItems="center">
         {showDate && program.date && (
           <Text fontSize="sm" color={template.textColor} opacity={0.7}>
-            📅 {formatDate(program.date)}
+            📅 {formatDate(String(program.date || ''))}
           </Text>
         )}
         
         {showLocation && program.location && (
           <Text fontSize="sm" color={template.textColor} opacity={0.7}>
-            📍 {program.location}
+            📍 {String(program.location || '')}
           </Text>
         )}
       </VStack>
@@ -156,7 +158,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
             textAlign="center"
             numberOfLines={3}
           >
-            {program.title}
+            {String(program.title || '')}
           </Heading>
           
           {program.description && (
@@ -167,7 +169,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
               opacity={0.9}
               numberOfLines={4}
             >
-              {program.description}
+              {String(program.description || '')}
             </Text>
           )}
         </VStack>
@@ -180,7 +182,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
             {program.total_budget && (
               <HStack space={2} alignItems="center">
                 <Text fontSize="2xl" fontWeight="bold" color={template.accentColor}>
-                  {formatBudget(program.total_budget)}
+                  {formatBudget(Number(program.total_budget || 0))}
                 </Text>
                 <Text fontSize="md" color={template.textColor} opacity={0.8}>
                   bütçe
@@ -191,7 +193,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
             {program.activities_count && (
               <HStack space={2} alignItems="center">
                 <Text fontSize="xl" fontWeight="bold" color={template.accentColor}>
-                  {program.activities_count}
+                  {Number(program.activities_count || 0)}
                 </Text>
                 <Text fontSize="md" color={template.textColor} opacity={0.8}>
                   aktivite
@@ -206,13 +208,13 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
       <VStack space={2} alignItems="center">
         {showDate && program.date && (
           <Text fontSize="md" color={template.textColor} opacity={0.8}>
-            📅 {formatDate(program.date)}
+            📅 {formatDate(String(program.date || ''))}
           </Text>
         )}
         
         {showLocation && program.location && (
           <Text fontSize="md" color={template.textColor} opacity={0.8}>
-            📍 {program.location}
+            📍 {String(program.location || '')}
           </Text>
         )}
       </VStack>
@@ -234,7 +236,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
           color={template.textColor}
           numberOfLines={2}
         >
-          {program.title}
+          {String(program.title || '')}
         </Heading>
         
         {program.description && (
@@ -244,13 +246,13 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
             opacity={0.8}
             numberOfLines={2}
           >
-            {program.description}
+            {String(program.description || '')}
           </Text>
         )}
 
         {showDate && program.date && (
           <Text fontSize="xs" color={template.textColor} opacity={0.7}>
-            📅 {formatDate(program.date)}
+            📅 {formatDate(String(program.date || ''))}
           </Text>
         )}
       </VStack>
@@ -261,7 +263,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
           {program.total_budget && (
             <VStack space={1} alignItems="center">
               <Text fontSize="lg" fontWeight="bold" color={template.accentColor}>
-                {formatBudget(program.total_budget)}
+                {formatBudget(Number(program.total_budget || 0))}
               </Text>
               <Text fontSize="xs" color={template.textColor} opacity={0.7}>
                 bütçe
@@ -272,7 +274,7 @@ const CollageView: React.FC<CollageViewProps> = ({ data, width, height }) => {
           {program.activities_count && (
             <VStack space={1} alignItems="center">
               <Text fontSize="md" fontWeight="bold" color={template.accentColor}>
-                {program.activities_count}
+                {Number(program.activities_count || 0)}
               </Text>
               <Text fontSize="xs" color={template.textColor} opacity={0.7}>
                 aktivite

@@ -14,7 +14,7 @@ export interface CollageTemplate {
 }
 
 export interface CollageData {
-  program: any;
+  program: Record<string, unknown>;
   template: CollageTemplate;
   customText?: string;
   showStats?: boolean;
@@ -101,15 +101,15 @@ class CollageGeneratorService {
   }
 
   // Program verilerinden kolaj metni oluştur
-  generateCollageText(program: any, customText?: string): string {
+  generateCollageText(program: Record<string, unknown>, customText?: string): string {
     if (customText) {
       return customText;
     }
 
-    const title = program.title || 'Yeni Program';
-    const date = program.date ? new Date(program.date).toLocaleDateString('tr-TR') : '';
-    const budget = program.total_budget ? `₺${program.total_budget.toLocaleString()}` : '';
-    const activities = program.activities_count ? `${program.activities_count} aktivite` : '';
+    const title = String(program.title || 'Yeni Program');
+    const date = program.date ? new Date(String(program.date)).toLocaleDateString('tr-TR') : '';
+    const budget = program.total_budget ? `₺${Number(program.total_budget).toLocaleString()}` : '';
+    const activities = program.activities_count ? `${Number(program.activities_count)} aktivite` : '';
 
     let text = title;
     if (date) text += `\n📅 ${date}`;
@@ -120,33 +120,35 @@ class CollageGeneratorService {
   }
 
   // Program istatistiklerini formatla
-  formatProgramStats(program: any): string[] {
+  formatProgramStats(program: Record<string, unknown>): string[] {
     const stats: string[] = [];
     
     if (program.total_budget) {
-      stats.push(`₺${program.total_budget.toLocaleString()} bütçe`);
+      stats.push(`₺${Number(program.total_budget).toLocaleString()} bütçe`);
     }
     
     if (program.activities_count) {
-      stats.push(`${program.activities_count} aktivite`);
+      stats.push(`${Number(program.activities_count)} aktivite`);
     }
     
     if (program.spent_amount !== undefined) {
-      const percentage = program.total_budget > 0 
-        ? Math.round((program.spent_amount / program.total_budget) * 100)
+      const totalBudget = Number(program.total_budget || 0);
+      const spentAmount = Number(program.spent_amount || 0);
+      const percentage = totalBudget > 0 
+        ? Math.round((spentAmount / totalBudget) * 100)
         : 0;
       stats.push(`%${percentage} tamamlandı`);
     }
     
     if (program.location) {
-      stats.push(`📍 ${program.location}`);
+      stats.push(`📍 ${String(program.location)}`);
     }
 
     return stats;
   }
 
   // Kolaj arka plan rengini hesapla
-  getBackgroundStyle(template: CollageTemplate): any {
+  getBackgroundStyle(template: CollageTemplate): Record<string, unknown> {
     if (template.backgroundColor.startsWith('linear-gradient')) {
       // Gradyan için basit bir renk döndür (React Native gradyan desteği için ayrı kütüphane gerekir)
       return { backgroundColor: '#667eea' };
@@ -156,7 +158,7 @@ class CollageGeneratorService {
   }
 
   // Kolaj önizleme verilerini oluştur
-  generatePreviewData(program: any, templateId: string): CollageData | null {
+  generatePreviewData(program: Record<string, unknown>, templateId: string): CollageData | null {
     const template = this.getTemplate(templateId);
     if (!template) return null;
 
@@ -171,7 +173,7 @@ class CollageGeneratorService {
   }
 
   // ViewShot ile kolajı görüntü olarak yakala
-  async captureCollage(viewShotRef: any, options?: any): Promise<string | null> {
+  async captureCollage(viewShotRef: { current: { capture: (options?: Record<string, unknown>) => Promise<string> } | null }, options?: Record<string, unknown>): Promise<string | null> {
     try {
       if (!viewShotRef?.current) {
         console.error('ViewShot ref bulunamadı');
@@ -229,20 +231,20 @@ class CollageGeneratorService {
     // Basit renk paleti oluşturma (gerçek uygulamada daha gelişmiş algoritma kullanılabilir)
     return {
       primary: baseColor,
-      secondary: this.lightenColor(baseColor, 20),
-      accent: this.complementaryColor(baseColor),
+      secondary: this.lightenColor(baseColor),
+      accent: this.complementaryColor(),
       text: this.getContrastColor(baseColor)
     };
   }
 
   // Rengi açma
-  private lightenColor(color: string, _percent: number): string {
+  private lightenColor(color: string): string {
     // Basit renk açma algoritması
     return color; // Gerçek implementasyon için color manipulation kütüphanesi gerekir
   }
 
   // Tamamlayıcı renk
-  private complementaryColor(_color: string): string {
+  private complementaryColor(): string {
     // Basit tamamlayıcı renk algoritması
     return '#fbbf24'; // Varsayılan accent rengi
   }

@@ -61,6 +61,8 @@ export const NotificationsScreen = () => {
   const textColor = useColorModeValue('gray.800', 'white');
   const mutedColor = useColorModeValue('gray.600', 'gray.400');
   const unreadBg = useColorModeValue('blue.50', 'blue.900');
+  const loadingBgColor = useColorModeValue('gray.50', 'gray.900');
+  const mainBgColor = useColorModeValue('gray.50', 'gray.900');
 
   useEffect(() => {
     loadNotifications();
@@ -283,7 +285,7 @@ export const NotificationsScreen = () => {
 
   if (loading) {
     return (
-      <Center flex={1} bg={useColorModeValue('gray.50', 'gray.900')}>
+      <Center flex={1} bg={loadingBgColor}>
         <Spinner size="lg" color="primary.500" />
         <Text mt={4} color={mutedColor}>
           Bildirimler yükleniyor...
@@ -293,7 +295,7 @@ export const NotificationsScreen = () => {
   }
 
   return (
-    <Box flex={1} bg={useColorModeValue('gray.50', 'gray.900')}>
+    <Box flex={1} bg={mainBgColor}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         // refreshControl={
@@ -349,7 +351,7 @@ export const NotificationsScreen = () => {
                   {formatDate(group.date)}
                 </Text>
                 
-                {group.notifications.map((notification, _index) => (
+                {group.notifications.map((notification) => (
                   <Pressable
                     key={notification.id}
                     onPress={() => handleNotificationPress(notification)}

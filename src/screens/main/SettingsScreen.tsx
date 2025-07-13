@@ -153,7 +153,7 @@ export const SettingsScreen = () => {
     }));
   };
 
-  const updatePrivacySetting = (key: keyof UserSettings['privacy'], value: any) => {
+  const updatePrivacySetting = (key: keyof UserSettings['privacy'], value: boolean | string) => {
     setSettings(prev => ({
       ...prev,
       privacy: {
@@ -163,7 +163,7 @@ export const SettingsScreen = () => {
     }));
   };
 
-  const updatePreferenceSetting = (key: keyof UserSettings['preferences'], value: any) => {
+  const updatePreferenceSetting = (key: keyof UserSettings['preferences'], value: boolean | string | string[]) => {
     setSettings(prev => ({
       ...prev,
       preferences: {

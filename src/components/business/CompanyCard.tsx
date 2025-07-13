@@ -334,7 +334,6 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             colorScheme="primary"
             size="sm"
             variant="subtle"
-            leftIcon="local-offer"
           />
           
           <Badge
@@ -342,7 +341,6 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             colorScheme="success"
             size="sm"
             variant="subtle"
-            leftIcon="savings"
           />
         </HStack>
         

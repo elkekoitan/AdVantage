@@ -199,14 +199,14 @@ class ProgramService {
       // Create new program
       const newProgramData: ProgramInsert = {
         user_id: _userId,
-        title: (originalProgram as any).title,
-        description: (originalProgram as any).description,
-        category: (originalProgram as any).category,
-        budget: (originalProgram as any).budget,
+        title: originalProgram.title,
+        description: originalProgram.description,
+        category: originalProgram.category,
+        budget: originalProgram.budget,
         priority: 'medium',
         activities: [],
         current_amount: 0,
-        target_amount: (originalProgram as any).budget || 0,
+        target_amount: originalProgram.budget || 0,
         start_date: new Date().toISOString(),
         end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
         status: 'draft',
@@ -257,10 +257,10 @@ class ProgramService {
 
       const stats: ProgramStats = {
         totalPrograms: programs?.length || 0,
-        activePrograms: programs?.filter((p: any) => p.status === 'active').length || 0,
-        completedPrograms: programs?.filter((p: any) => p.status === 'completed').length || 0,
-        totalBudget: programs?.reduce((sum: number, p: any) => sum + (p.total_budget || 0), 0) || 0,
-        totalSpent: programs?.reduce((sum: number, p: any) => sum + (p.spent_amount || 0), 0) || 0,
+        activePrograms: programs?.filter(p => p.status === 'active').length || 0,
+        completedPrograms: programs?.filter(p => p.status === 'completed').length || 0,
+        totalBudget: programs?.reduce((sum: number, p) => sum + (p.total_budget || 0), 0) || 0,
+        totalSpent: programs?.reduce((sum: number, p) => sum + (p.spent_amount || 0), 0) || 0,
         averageCompletion: 0
       };
 

@@ -11,7 +11,7 @@ interface CardProps extends IBoxProps {
   isDisabled?: boolean;
   rounded?: 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   padding?: number;
-  hapticFeedback?: boolean;
+
   hoverEffect?: boolean;
 }
 
@@ -104,7 +104,7 @@ const Card: React.FC<CardProps> & {
   isDisabled = false, 
   rounded = '2xl',
   padding = 6,
-  hapticFeedback = true,
+
   hoverEffect = true,
   ...props 
 }) => {

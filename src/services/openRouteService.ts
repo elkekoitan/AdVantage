@@ -516,7 +516,7 @@ class OpenRouteService {
       const radius = filters.radius || 5000;
       
       // Build Overpass query for more detailed POI data
-      const overpassQuery = this.buildOverpassQuery(location, query, radius, filters);
+      const overpassQuery = this.buildOverpassQuery(location, query, radius);
       
       const response = await axios.post(OVERPASS_API_URL, overpassQuery, {
         headers: {
@@ -525,7 +525,7 @@ class OpenRouteService {
         timeout: 15000
       });
 
-      const places = this.parseOverpassResponse(response.data, filters);
+      const places = this.parseOverpassResponse(response.data);
       
       return {
         places,
@@ -649,7 +649,7 @@ class OpenRouteService {
     radius: number = 10000
   ): Promise<EnhancedPOIResponse> {
     try {
-      const searchParams: any = {
+      const searchParams: Record<string, string | number> = {
         text: query,
         size: 20,
         layers: 'venue,address'
@@ -686,12 +686,11 @@ class OpenRouteService {
   private buildOverpassQuery(
     location: Coordinates,
     query: string,
-    radius: number,
-    _filters: SearchFilters
+    radius: number
   ): string {
     const bbox = this.calculateBoundingBox(location, radius);
     
-    let overpassQuery = `
+    const overpassQuery = `
       [out:json][timeout:25];
       (
         node["amenity"~"${query}"]["name"](${bbox});
@@ -707,44 +706,52 @@ class OpenRouteService {
   /**
    * Parse Overpass API response
    */
-  private parseOverpassResponse(data: any, _filters: SearchFilters): PlaceDetails[] {
+  private parseOverpassResponse(data: { elements?: Record<string, unknown>[] }): PlaceDetails[] {
     if (!data.elements) return [];
 
-    return data.elements.map((element: any): PlaceDetails => {
+    return data.elements.map((element: Record<string, unknown>): PlaceDetails => {
+      const elementTags = element.tags as Record<string, string> | undefined;
+      const elementCenter = element.center as { lat: number; lon: number } | undefined;
+      
       const coords = element.type === 'node' 
-        ? { lat: element.lat, lng: element.lon }
-        : { lat: element.center?.lat || 0, lng: element.center?.lon || 0 };
+        ? { lat: element.lat as number, lng: element.lon as number }
+        : { lat: elementCenter?.lat || 0, lng: elementCenter?.lon || 0 };
 
       return {
-        id: element.id.toString(),
-        name: element.tags?.name || 'İsimsiz Mekan',
-        address: this.buildAddress(element.tags),
+        id: (element.id as string | number).toString(),
+        name: elementTags?.name || 'İsimsiz Mekan',
+        address: this.buildAddress(elementTags || {}),
         coordinates: coords,
-        category: element.tags?.amenity || 'unknown',
+        category: elementTags?.amenity || 'unknown',
         rating: this.generateMockRating(),
         contact: {
-          phone: element.tags?.phone,
-          website: element.tags?.website
+          phone: elementTags?.phone,
+          website: elementTags?.website
         }
       };
-    }).filter((place: PlaceDetails) => place.coordinates.lat !== 0 && place.coordinates.lng !== 0);
+    }).filter(place => place.coordinates.lat !== 0 && place.coordinates.lng !== 0);
   }
 
   /**
    * Convert basic POI response to PlaceDetails
    */
-  private convertBasicPOIToPlaceDetails(features: any[]): PlaceDetails[] {
-    return features.map((feature: any): PlaceDetails => ({
-      id: feature.properties.id || Math.random().toString(),
-      name: feature.properties.name || 'İsimsiz Mekan',
-      address: feature.properties.label || 'Adres bilgisi yok',
-      coordinates: {
-        lat: feature.geometry.coordinates[1],
-        lng: feature.geometry.coordinates[0]
-      },
-      category: feature.properties.layer || 'unknown',
-      rating: this.generateMockRating()
-    }));
+  private convertBasicPOIToPlaceDetails(features: Record<string, unknown>[]): PlaceDetails[] {
+    return features.map((feature: Record<string, unknown>): PlaceDetails => {
+      const properties = feature.properties as Record<string, unknown> | undefined;
+      const geometry = feature.geometry as { coordinates: [number, number] } | undefined;
+      
+      return {
+        id: (properties?.id as string) || Math.random().toString(),
+        name: (properties?.name as string) || 'İsimsiz Mekan',
+        address: (properties?.label as string) || 'Adres bilgisi yok',
+        coordinates: {
+          lat: geometry?.coordinates[1] || 0,
+          lng: geometry?.coordinates[0] || 0
+        },
+        category: (properties?.layer as string) || 'unknown',
+        rating: this.generateMockRating()
+      };
+    });
   }
 
   /**
@@ -766,7 +773,7 @@ class OpenRouteService {
   /**
    * Build address from OSM tags
    */
-  private buildAddress(tags: any): string {
+  private buildAddress(tags: Record<string, string>): string {
     const parts = [];
     if (tags['addr:street']) parts.push(tags['addr:street']);
     if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);

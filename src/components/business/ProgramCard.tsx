@@ -123,7 +123,7 @@ export const ProgramCard: React.FC<ProgramCardProps> = ({
             <VStack space={3}>
               <HStack justifyContent="space-between" alignItems="center">
                 <StatusBadge status={program.status} />
-                <Badge label={program.category} variant="subtle" colorScheme="primary" size="sm" />
+                <Badge label={program.category || 'Kategori'} variant="subtle" colorScheme="primary" size="sm" />
               </HStack>
               
               <VStack space={2}>

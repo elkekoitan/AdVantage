@@ -9,7 +9,6 @@ import {
   ScrollView,
   Icon,
   Progress,
-  Badge,
   useToast,
   Skeleton,
   Center,
@@ -24,6 +23,7 @@ import {
   Spinner,
   TextArea,
 } from 'native-base';
+import { Badge } from '../../components/ui';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
@@ -80,7 +80,17 @@ export const ProgramDetailScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  interface AISuggestion {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    estimatedCost: number;
+    priority: number;
+    potentialSavings: number;
+  }
+
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
 
   // Add Activity Form State
   const [activityForm, setActivityForm] = useState({
@@ -443,7 +453,7 @@ export const ProgramDetailScreen = () => {
         budget: userPreferences.budget,
       });
 
-      setAiSuggestions(suggestions || []);
+      setAiSuggestions((suggestions || []) as unknown as AISuggestion[]);
       onAiSuggestionsOpen();
     } catch (error: unknown) {
       let errorMessage = 'AI önerileri alınırken bir hata oluştu.';
@@ -481,13 +491,13 @@ export const ProgramDetailScreen = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'green';
+        return 'success';
       case 'pending':
-        return 'orange';
+        return 'warning';
       case 'overdue':
-        return 'red';
+        return 'danger';
       case 'active':
-        return 'blue';
+        return 'primary';
       case 'paused':
         return 'gray';
       default:
@@ -557,14 +567,14 @@ export const ProgramDetailScreen = () => {
           </VStack>
         </Modal.Body>
         <Modal.Footer>
-          <Button.Group space={2}>
+          <HStack space={2} justifyContent="flex-end">
             <Button variant="ghost" colorScheme="blueGray" onPress={onEditClose}>
               İptal
             </Button>
             <Button onPress={handleEditProgram} isLoading={updating}>
               Güncelle
             </Button>
-          </Button.Group>
+          </HStack>
         </Modal.Footer>
       </Modal.Content>
     </Modal>
@@ -602,14 +612,14 @@ export const ProgramDetailScreen = () => {
           </VStack>
         </Modal.Body>
         <Modal.Footer>
-          <Button.Group space={2}>
+          <HStack space={2} justifyContent="flex-end">
             <Button variant="ghost" colorScheme="blueGray" onPress={() => setShowExpenseModal(false)}>
               İptal
             </Button>
             <Button onPress={handleAddExpense} isLoading={updating}>
               Harcama Ekle
             </Button>
-          </Button.Group>
+          </HStack>
         </Modal.Footer>
       </Modal.Content>
     </Modal>
@@ -710,7 +720,7 @@ export const ProgramDetailScreen = () => {
                   {program.description}
                 </Text>
                 <HStack space={2} alignItems="center">
-                  <Badge colorScheme={getStatusColor(program.status)} variant="solid" rounded="full">
+                  <Badge colorScheme={getStatusColor(program.status)} variant="solid" rounded={true} label={getStatusText(program.status)}>
                     {getStatusText(program.status)}
                   </Badge>
                   <Text color="gray.500" fontSize="xs">
@@ -829,7 +839,7 @@ export const ProgramDetailScreen = () => {
                           {activity.description}
                         </Text>
                         <HStack space={2} alignItems="center">
-                          <Badge colorScheme="gray" variant="outline" size="sm">
+                          <Badge colorScheme="gray" variant="outline" size="sm" label={activity.category}>
                             {activity.category}
                           </Badge>
                           <Text fontSize="xs" color="gray.500">
@@ -837,7 +847,7 @@ export const ProgramDetailScreen = () => {
                           </Text>
                         </HStack>
                       </VStack>
-                      <Badge colorScheme={getStatusColor(activity.status)} variant="solid" rounded="full">
+                      <Badge colorScheme={getStatusColor(activity.status)} variant="solid" rounded={true} label={getStatusText(activity.status)}>
                         {getStatusText(activity.status)}
                       </Badge>
                     </HStack>

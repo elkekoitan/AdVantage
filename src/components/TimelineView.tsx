@@ -7,7 +7,6 @@ import {
   Heading,
   ScrollView,
   Pressable,
-  Badge,
   Modal,
   Button,
   useTheme,
@@ -15,6 +14,7 @@ import {
   Progress,
   IconButton,
 } from 'native-base';
+import { Badge } from './ui';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TimelineActivity, DailyTimeline } from '../services/aiAssistantService';
 import { Card } from './ui/Card';
@@ -186,7 +186,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               <MaterialIcons
                 name="psychology"
                 size={20}
-                color={(theme.colors as any)[getMoodColor(timeline.moodAnalysis.primary)]?.[500] || theme.colors.gray[500]}
+                color={(theme.colors[getMoodColor(timeline.moodAnalysis.primary) as keyof typeof theme.colors] as any)?.[500] || theme.colors.gray[500]}
               />
             </Box>
             <VStack flex={1}>
@@ -195,19 +195,17 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               </Text>
               <HStack space={2}>
                 <Badge
-                  colorScheme={getMoodColor(timeline.moodAnalysis.primary)}
+                  label={timeline.moodAnalysis.primary}
+                  colorScheme={getMoodColor(timeline.moodAnalysis.primary) as 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'gray'}
                   variant="solid"
-                  rounded="full"
-                >
-                  {timeline.moodAnalysis.primary}
-                </Badge>
+                  rounded={true}
+                />
                 <Badge
-                  colorScheme={getMoodColor(timeline.moodAnalysis.secondary)}
+                  label={timeline.moodAnalysis.secondary}
+                  colorScheme={getMoodColor(timeline.moodAnalysis.secondary) as 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'gray'}
                   variant="outline"
-                  rounded="full"
-                >
-                  {timeline.moodAnalysis.secondary}
-                </Badge>
+                  rounded={true}
+                />
               </HStack>
             </VStack>
           </HStack>
@@ -246,7 +244,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             shadow={2}
           >
             <MaterialIcons
-              name={getActivityIcon(activity.type) as any}
+              name={getActivityIcon(activity.type) as keyof typeof MaterialIcons.glyphMap}
               size={20}
               color="white"
             />
@@ -281,9 +279,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 </VStack>
                 
                 <VStack alignItems="flex-end" space={1}>
-                  <Badge colorScheme={activityColor} variant="solid" rounded="md">
-                    {formatTime(activity.startTime)} - {formatTime(activity.endTime)}
-                  </Badge>
+                  <Badge 
+                    label={`${formatTime(activity.startTime)} - ${formatTime(activity.endTime)}`}
+                    colorScheme={activityColor as 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'gray'} 
+                    variant="solid" 
+                    rounded={false}
+                  />
                   <Text fontSize="xs" color={mutedColor}>
                     {calculateDuration(activity.startTime, activity.endTime)}
                   </Text>
@@ -317,9 +318,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 )}
                 
                 {activity.discount && (
-                  <Badge colorScheme="red" variant="solid" rounded="full">
-                    %{activity.discount.percentage} İndirim
-                  </Badge>
+                  <Badge 
+                    label={`%${activity.discount.percentage} İndirim`}
+                    colorScheme="danger" 
+                    variant="solid" 
+                    rounded={true}
+                  />
                 )}
               </HStack>
 
@@ -383,9 +387,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     )}
                     
                     {alternative.discount && (
-                      <Badge colorScheme="red" variant="solid" rounded="full" alignSelf="flex-start">
-                        %{alternative.discount.percentage} İndirim
-                      </Badge>
+                      <Badge 
+                        label={`%${alternative.discount.percentage} İndirim`}
+                        colorScheme="danger" 
+                        variant="solid" 
+                        rounded={true} 
+                        alignSelf="flex-start"
+                      />
                     )}
                   </VStack>
                 </Card>

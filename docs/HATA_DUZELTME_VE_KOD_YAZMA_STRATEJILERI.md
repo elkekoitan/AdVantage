@@ -4,8 +4,10 @@
 
 ### 1. Sistematik Hata Analizi
 - **TypeScript Kontrolü**: Her değişiklik sonrası `npx tsc --noEmit` ile tip kontrolü
-- **Hata Kategorileri**: Import hataları, tip uyumsuzlukları, kullanılmayan değişkenler
-- **Öncelik Sırası**: Kritik hatalar → Tip hataları → Uyarılar
+- **ESLint Kontrolü**: `npx eslint "src/**/*.{ts,tsx}"` ile kod kalitesi kontrolü
+- **Hata Kategorileri**: Import hataları, tip uyumsuzlukları, kullanılmayan değişkenler, Hook kuralları
+- **Öncelik Sırası**: Kritik hatalar → Hook kuralları → Tip hataları → Uyarılar
+- **React Hooks Kuralları**: Koşullu Hook çağrılarını önle, bağımlılık dizilerini kontrol et
 
 ### 2. Kod Yazma Stratejileri
 
@@ -40,12 +42,62 @@ const handleChange = (value) => {
 <Checkbox onValueChange={(isChecked) => handleCheck(isChecked)} />
 ```
 
+#### D. React Hooks Kuralları
+```typescript
+// ✅ Doğru: Hook'ları bileşenin en üstünde çağır
+const MyComponent = () => {
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const [loading, setLoading] = useState(false);
+  
+  if (loading) {
+    return <Spinner />;
+  }
+  
+  return <Box bg={bgColor}>Content</Box>;
+};
+
+// ❌ Yanlış: Koşullu Hook çağrısı
+const MyComponent = () => {
+  const [loading, setLoading] = useState(false);
+  
+  if (loading) {
+    const bgColor = useColorModeValue('white', 'gray.800'); // HATA!
+    return <Spinner />;
+  }
+  
+  return <Box>Content</Box>;
+};
+```
+
+#### E. Kullanılmayan Değişkenler
+```typescript
+// ✅ Doğru: Sadece kullanılan değişkenleri tanımla
+const MyComponent = () => {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <Button onPress={() => setCount(count + 1)}>
+      Count: {count}
+    </Button>
+  );
+};
+
+// ❌ Yanlış: Kullanılmayan değişken
+const MyComponent = () => {
+  const [count, setCount] = useState(0);
+  const unusedVariable = 'not used'; // ESLint hatası!
+  
+  return <Text>Count: {count}</Text>;
+};
+```
+
 ### 3. Hata Düzeltme Süreci
 
 #### Adım 1: Hata Tespiti
-1. TypeScript kontrolü çalıştır
-2. Hataları kategorilere ayır
-3. En kritik hatalardan başla
+1. TypeScript kontrolü çalıştır: `npx tsc --noEmit`
+2. ESLint kontrolü çalıştır: `npx eslint "src/**/*.{ts,tsx}"`
+3. Hataları kategorilere ayır (Hook kuralları, tip hataları, kullanılmayan değişkenler)
+4. En kritik hatalardan başla (Hook kuralları öncelikli)
 
 #### Adım 2: Analiz
 1. Hata mesajını dikkatlice oku
@@ -58,9 +110,10 @@ const handleChange = (value) => {
 3. Test et
 
 #### Adım 4: Doğrulama
-1. TypeScript kontrolü tekrar çalıştır
-2. Yeni hata oluşmadığını kontrol et
-3. Fonksiyonaliteyi test et
+1. TypeScript kontrolü tekrar çalıştır: `npx tsc --noEmit`
+2. ESLint kontrolü tekrar çalıştır: `npx eslint "src/**/*.{ts,tsx}"`
+3. Yeni hata oluşmadığını kontrol et
+4. Fonksiyonaliteyi test et
 
 ### 4. Git Workflow
 
@@ -91,7 +144,9 @@ git commit -m "refactor: kullanılmayan import'ları kaldır"
 6. **Commit**: Değişiklikleri kaydet
 
 #### Kalite Kontrol
-- Her commit öncesi TypeScript kontrolü
+- Her commit öncesi TypeScript kontrolü: `npx tsc --noEmit`
+- Her commit öncesi ESLint kontrolü: `npx eslint "src/**/*.{ts,tsx}"`
+- Hook kuralları ve kullanılmayan değişken kontrolü
 - Kod review (mümkünse)
 - Fonksiyonel test
 - Dokümantasyon güncellemesi
@@ -125,21 +180,98 @@ try {
 }
 ```
 
-### 8. Best Practices
+### 8. ESLint ve Hook Optimizasyonları
+
+#### A. React Hooks Kuralları (rules-of-hooks)
+```typescript
+// ✅ Doğru: Tüm Hook'ları bileşenin başında tanımla
+const MyComponent = () => {
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('black', 'white');
+  const [loading, setLoading] = useState(false);
+  
+  // Koşullu render
+  if (loading) {
+    return <Spinner />;
+  }
+  
+  return (
+    <Box bg={bgColor}>
+      <Text color={textColor}>Content</Text>
+    </Box>
+  );
+};
+```
+
+#### B. Kullanılmayan Değişken Temizliği
+```typescript
+// ✅ Doğru: Sadece kullanılan import'ları dahil et
+import { Box, Text } from 'native-base';
+
+// ❌ Yanlış: Kullanılmayan import'lar
+import { Box, Text, Button, Modal, VStack } from 'native-base';
+```
+
+#### C. useEffect Bağımlılık Dizileri
+```typescript
+// ✅ Doğru: Tüm bağımlılıkları dahil et
+useEffect(() => {
+  loadData(userId, filter);
+}, [userId, filter]);
+
+// ❌ Yanlış: Eksik bağımlılık
+useEffect(() => {
+  loadData(userId, filter);
+}, [userId]); // filter eksik!
+```
+
+#### D. Performans Optimizasyonu
+```typescript
+// ✅ Doğru: Hook'ları optimize et
+const MyComponent = () => {
+  // Renk değişkenlerini en üstte tanımla
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('black', 'white');
+  
+  // State'leri grupla
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  
+  // Callback'leri memoize et
+  const handlePress = useCallback(() => {
+    // Handle press
+  }, []);
+  
+  return (
+    <Box bg={bgColor}>
+      <Text color={textColor}>Content</Text>
+    </Box>
+  );
+};
+```
+
+### 9. Best Practices
 
 1. **Küçük Adımlar**: Her seferinde küçük değişiklikler yap
 2. **Test Driven**: Önce test et, sonra düzelt
 3. **Dokümantasyon**: Her değişikliği kaydet
 4. **Backup**: Önemli değişiklikler öncesi backup al
 5. **Review**: Kodu gözden geçir
+6. **ESLint First**: Her değişiklik sonrası ESLint çalıştır
+7. **Hook Optimization**: Hook'ları bileşenin başında topla
 
-### 9. Gelecek Nesillere Tavsiyeler
+### 10. Gelecek Nesillere Tavsiyeler
 
 - **Sabırlı ol**: Hata düzeltme zaman alır
 - **Sistematik yaklaş**: Rastgele değişiklik yapma
+- **ESLint'i arkadaşın yap**: Her değişiklik sonrası çalıştır
+- **Hook kurallarını öğren**: React'in temel kurallarını anla
+- **Temiz kod yaz**: Kullanılmayan değişkenleri hemen temizle
 - **Öğrenmeye devam et**: Her hata bir öğrenme fırsatı
 - **Dokümante et**: Çözümlerini kaydet
 - **Paylaş**: Bilgini başkalarıyla paylaş
+- **Performansı unutma**: Hook optimizasyonları önemli
+- **Kod kalitesi öncelik**: Çalışan kod yeterli değil, kaliteli olmalı
 
 ---
 

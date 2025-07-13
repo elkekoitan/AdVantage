@@ -147,6 +147,8 @@ export const ActivityDetailScreen = () => {
   // const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.800', 'white');
   const mutedColor = useColorModeValue('gray.600', 'gray.400');
+  const loadingBgColor = useColorModeValue('gray.50', 'gray.900');
+  const mainBgColor = useColorModeValue('gray.50', 'gray.900');
 
   useEffect(() => {
     loadActivity();
@@ -460,7 +462,7 @@ export const ActivityDetailScreen = () => {
 
   if (loading) {
     return (
-      <Box flex={1} bg={useColorModeValue('gray.50', 'gray.900')} p={4}>
+      <Box flex={1} bg={loadingBgColor} p={4}>
         <VStack space={4}>
           <Skeleton h={8} />
           <Skeleton h={32} />
@@ -474,14 +476,14 @@ export const ActivityDetailScreen = () => {
 
   if (!activity) {
     return (
-      <Center flex={1} bg={useColorModeValue('gray.50', 'gray.900')}>
+      <Center flex={1} bg={loadingBgColor}>
         <Text color={mutedColor}>Aktivite bulunamadı.</Text>
       </Center>
     );
   }
 
   return (
-    <Box flex={1} bg={useColorModeValue('gray.50', 'gray.900')}>
+    <Box flex={1} bg={mainBgColor}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <VStack space={6} p={4}>
           {/* Header */}

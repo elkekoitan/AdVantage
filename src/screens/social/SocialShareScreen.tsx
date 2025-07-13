@@ -9,11 +9,11 @@ import {
   useColorModeValue,
   Modal,
   Switch,
-  Badge,
   Spinner,
   useToast,
   Icon
 } from 'native-base';
+import { Badge } from '../../components/ui';
 import { Dimensions, ScrollView, Pressable } from 'react-native';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -129,7 +129,7 @@ const SocialShareScreen: React.FC = () => {
 
   const initializeCollageData = () => {
     try {
-      const initialCollageData = collageGenerator.generatePreviewData(program, selectedTemplate.id);
+      const initialCollageData = collageGenerator.generatePreviewData(program as unknown as Record<string, unknown>, selectedTemplate.id);
       if (initialCollageData) {
         setCollageData(initialCollageData);
       }
@@ -187,7 +187,7 @@ const SocialShareScreen: React.FC = () => {
 
     try {
       setIsGeneratingCollage(true);
-      const uri = await collageGenerator.captureCollage(viewShotRef, {
+      const uri = await collageGenerator.captureCollage(viewShotRef as any, {
         format: 'png',
         quality: 0.9,
       });
@@ -241,7 +241,7 @@ const SocialShareScreen: React.FC = () => {
 
       // Paylaşım verilerini hazırla
       const shareData: SocialShareData = {
-        program,
+        program: program as any,
         platforms: selectedPlatforms,
         title: program.title,
         description: customCaption,
@@ -292,7 +292,7 @@ const SocialShareScreen: React.FC = () => {
               key={template.id}
               onPress={() => {
                 setSelectedTemplate(template);
-                const newCollageData = collageGenerator.generatePreviewData(program, template.id);
+                const newCollageData = collageGenerator.generatePreviewData(program as unknown as Record<string, unknown>, template.id);
                 if (newCollageData) {
                   setCollageData(newCollageData);
                 }
@@ -438,13 +438,11 @@ const SocialShareScreen: React.FC = () => {
                 {/* Hashtags */}
                 <Box>
                   <Text fontSize="sm" fontWeight="medium" mb={2}>
-                    Önerilen Hashtag'ler:
+                    Önerilen Hashtag&apos;ler:
                   </Text>
                   <HStack flexWrap="wrap" space={1}>
                     {socialContent.hashtags.map((tag, index) => (
-                      <Badge key={index} colorScheme="blue" variant="subtle" mb={1}>
-                        {tag}
-                      </Badge>
+                      <Badge key={index} label={tag} colorScheme="primary" variant="subtle" mb={1} />
                     ))}
                   </HStack>
                 </Box>
@@ -492,7 +490,7 @@ const SocialShareScreen: React.FC = () => {
                     <HStack alignItems="center" space={3}>
                       <Icon
                         as={Ionicons}
-                        name={platform.icon as any}
+                        name={platform.icon as keyof typeof Ionicons.glyphMap}
                         size="lg"
                         color={platform.color}
                       />
@@ -558,7 +556,7 @@ const SocialShareScreen: React.FC = () => {
                 {socialContent && (
                   <Box>
                     <Text fontSize="sm" fontWeight="medium" mb={2}>
-                      Hashtag'ler:
+                      Hashtag&apos;ler:
                     </Text>
                     <Text fontSize="sm" color="blue.500">
                       {socialContent.hashtags.join(' ')}
@@ -574,9 +572,7 @@ const SocialShareScreen: React.FC = () => {
                     {selectedPlatforms.map(platformId => {
                       const platform = platforms.find(p => p.id === platformId);
                       return platform ? (
-                        <Badge key={platformId} colorScheme="blue">
-                          {platform.name}
-                        </Badge>
+                        <Badge key={platformId} label={platform.name} colorScheme="primary" />
                       ) : null;
                     })}
                   </HStack>

@@ -51,11 +51,23 @@ const typography = {
   },
 };
 
+interface Place {
+  properties: {
+    id?: string;
+    name?: string;
+    label?: string;
+    category?: string;
+  };
+  geometry: {
+    coordinates: [number, number]; // [lng, lat]
+  };
+}
+
 interface LocationBasedSuggestionsProps {
   userLocation?: { latitude: number; longitude: number } | null;
   activityType?: string;
-  onPlaceSelect?: (place: any) => void;
-  onNavigateToMap?: (place: any, routeInfo?: { distance: string; duration: string; coordinates?: number[][] }) => void;
+  onPlaceSelect?: (place: Place) => void;
+  onNavigateToMap?: (place: Place, routeInfo?: { distance: string; duration: string; coordinates?: number[][] }) => void;
 }
 
 const ACTIVITY_TYPES = {
@@ -103,7 +115,7 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
   onPlaceSelect,
   onNavigateToMap,
 }) => {
-  const [places, setPlaces] = useState<any[]>([]);
+  const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedActivityType, setSelectedActivityType] = useState(activityType || 'gym');
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +132,14 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
         type,
         5000 // 5km radius
       );
-      setPlaces(results.features?.slice(0, 10) || []); // Limit to 10 results
+      const formattedPlaces = results.features?.slice(0, 10).map(feature => ({
+        ...feature,
+        geometry: {
+          ...feature.geometry,
+          coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [number, number]
+        }
+      })) || [];
+      setPlaces(formattedPlaces);
     } catch (err) {
       console.error('Error fetching nearby places:', err);
       setError('Yakındaki yerler yüklenirken hata oluştu.');
@@ -139,7 +158,7 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
     setSelectedActivityType(type);
   };
 
-  const handleGetDirections = async (place: any) => {
+  const handleGetDirections = async (place: Place) => {
     try {
       // Use OpenRouteService for directions
        const routeResponse = await openRouteService.getDirections(
@@ -168,7 +187,7 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
     Linking.openURL(url);
   };
 
-  const handlePlacePress = (place: any) => {
+  const handlePlacePress = (place: Place) => {
     if (onPlaceSelect) {
       onPlaceSelect(place);
     } else {
@@ -221,7 +240,7 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
     );
   };
 
-  const renderPlaceCard = (place: any) => {
+  const renderPlaceCard = (place: Place) => {
     const distance = userLocation
       ? calculateDistance(
           userLocation.latitude,

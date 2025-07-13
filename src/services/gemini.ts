@@ -340,8 +340,8 @@ export class GeminiService {
     }
   }
 
-  async optimizeProgramBudget(activities: any[], targetBudget: number): Promise<any[]> {
-    const currentTotal = activities.reduce((sum, activity) => sum + (activity.estimated_cost || 0), 0);
+  async optimizeProgramBudget(activities: Record<string, unknown>[], targetBudget: number): Promise<Record<string, unknown>[]> {
+    const currentTotal = activities.reduce((sum, activity) => sum + Number(activity.estimated_cost || 0), 0);
     
     if (currentTotal <= targetBudget) {
       return activities;
@@ -550,12 +550,12 @@ export class GeminiService {
     }
   }
 
-  async generateAndSaveRecommendations(userId: string, type: 'restaurant' | 'activity' | 'product' | 'event' | 'program' = 'restaurant'): Promise<void> {
+  async generateAndSaveRecommendations(userId: string): Promise<void> {
     try {
       const userPreferences = await this.getUserPreferences(userId);
       
       const recommendations = await this.generatePersonalizedRecommendations({
-        type: type,
+        type: 'restaurant',
         user_preferences: userPreferences,
         context: 'Daily recommendations for AdVantage app',
       });

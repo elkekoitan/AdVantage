@@ -112,7 +112,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
               alignItems="center"
             >
               <MaterialIcons
-                name={getTypeIcon(recommendation.category) as any}
+                name={getTypeIcon(recommendation.category) as keyof typeof MaterialIcons.glyphMap}
                 size={40}
                 color="white"
               />

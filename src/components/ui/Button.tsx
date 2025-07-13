@@ -14,7 +14,7 @@ interface CustomButtonProps extends Omit<IButtonProps, 'leftIcon' | 'rightIcon'>
   isDisabled?: boolean;
   fullWidth?: boolean;
   rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
-  hapticFeedback?: boolean;
+
 }
 
 export const Button: React.FC<CustomButtonProps> = ({
@@ -28,7 +28,7 @@ export const Button: React.FC<CustomButtonProps> = ({
   isDisabled = false,
   fullWidth = false,
   rounded = '2xl',
-  hapticFeedback = true,
+
   ...props
 }) => {
   // Icon size mapping

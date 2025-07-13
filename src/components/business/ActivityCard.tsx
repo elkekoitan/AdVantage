@@ -230,7 +230,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                     colorScheme="primary"
                     size="sm"
                     variant="subtle"
-                    leftIcon="category"
                   />
                   
                   <Badge
@@ -238,7 +237,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                     colorScheme={getPriorityColor(activity.priority)}
                     size="sm"
                     variant="outline"
-                    leftIcon="flag"
                   />
                   
                   {activity.tags?.map((tag, index) => (
@@ -355,7 +353,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                   variant="outline"
                   size="sm"
                   colorScheme="primary"
-                  leftIcon="edit"
                   onPress={() => onEdit(activity)}
                 />
               )}
@@ -366,7 +363,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                   variant="outline"
                   size="sm"
                   colorScheme="danger"
-                  leftIcon="delete"
                   onPress={() => onDelete(activity)}
                 />
               )}

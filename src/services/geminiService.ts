@@ -45,7 +45,7 @@ interface DailyProgram {
 
 class GeminiService {
   private genAI: GoogleGenerativeAI;
-  private model: any;
+  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
 
   constructor() {
     const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
@@ -64,7 +64,7 @@ class GeminiService {
     }
   }
 
-  async generateStructuredResponse(prompt: string, schema?: any): Promise<any> {
+  async generateStructuredResponse(prompt: string, schema?: Record<string, unknown>): Promise<Record<string, unknown>> {
     try {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -79,7 +79,7 @@ class GeminiService {
         }
       }
       
-      return text;
+      return { response: text };
     } catch (error) {
       console.error('Gemini API error:', error);
       return { error: 'API yanıt veremedi' };
@@ -120,14 +120,14 @@ class GeminiService {
     }
   }
 
-  async generateDailyProgram(request: any): Promise<DailyProgram | null> {
+  async generateDailyProgram(request: Record<string, unknown>): Promise<DailyProgram | null> {
     try {
       const prompt = `
 Sen bir AI program asistanısın. Kullanıcının tercihlerine göre günlük program oluştur.
 
 Kullanıcı Bilgileri:
-- İlgi Alanları: ${request.user_preferences.interests?.join(', ') || 'Genel'}
-- Aktivite Türleri: ${request.user_preferences.activity_types?.join(', ') || 'Çeşitli'}
+- İlgi Alanları: ${(request.user_preferences as any)?.interests?.join(', ') || 'Genel'}
+        - Aktivite Türleri: ${(request.user_preferences as any)?.preferredActivities?.join(', ') || 'Çeşitli'}
 - Bütçe: ${request.budget} TL
 - Süre: ${request.duration} saat
 - Konum: ${request.location}
@@ -187,7 +187,7 @@ Sadece JSON formatında yanıt ver, başka açıklama ekleme.
     }
   }
 
-  async generateRecommendations(userId: string, category: string, location: string, budget: number): Promise<any[]> {
+  async generateRecommendations(userId: string, category: string, location: string, budget: number): Promise<Record<string, unknown>[]> {
     try {
       const userPrefs = await this.getUserPreferences(userId);
       

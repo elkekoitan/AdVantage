@@ -14,10 +14,10 @@ import {
   Pressable,
   useTheme,
   Fab,
-  Badge,
   Button,
   Icon,
 } from 'native-base';
+import { Badge } from '../../components/ui';
 import { RefreshControl, Alert } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +43,8 @@ interface Program {
   activities_count: number;
   total_budget: number;
   spent_amount: number;
+  description?: string;
+  activities?: Array<{ id: string; title: string; }>;
 }
 
 interface Recommendation {
@@ -163,7 +165,7 @@ export const HomeScreen = () => {
         'genel',
         'neutral'
       );
-      setAiRecommendations(recs);
+      setAiRecommendations(recs as unknown as AIRecommendation[]);
       setHasNewRecommendations(true);
     } catch (error) {
       Alert.alert('Hata', 'Öneriler alınırken bir hata oluştu.');
@@ -207,7 +209,7 @@ export const HomeScreen = () => {
       // Transform programs data
       const transformedPrograms = (programsData as SupabaseProgramData[])?.map((program) => ({
         ...program,
-        activities_count: program.program_activities?.length || 0,
+        activities_count: Array.isArray(program.program_activities) ? program.program_activities.length : 0,
       })) || [];
 
       setPrograms(transformedPrograms);
@@ -327,7 +329,7 @@ export const HomeScreen = () => {
                   bg="primary.500"
                   _text={{ color: 'white', fontWeight: 'bold' }}
                 >
-                  {user?.user_metadata?.full_name?.charAt(0) || 'U'}
+                  {String(user?.user_metadata?.full_name || 'U').charAt(0)}
                 </Avatar>
                 <VStack>
                   <Text color={mutedColor} fontSize="sm">Merhaba,</Text>
@@ -356,17 +358,16 @@ export const HomeScreen = () => {
                     colorScheme="primary"
                   />
                   <Badge
+                    label="3"
                     position="absolute"
                     top={0}
                     right={0}
                     bg="red.500"
-                    rounded="full"
+                    rounded={true}
                     minW={4}
                     h={4}
                     _text={{ fontSize: 'xs', color: 'white' }}
-                  >
-                    3
-                  </Badge>
+                  />
                 </Box>
                 <IconButton
                   icon={<MaterialIcons name="logout" size={24} />}
@@ -469,7 +470,7 @@ export const HomeScreen = () => {
                         AI Asistan
                       </Text>
                       {hasNewRecommendations && (
-                        <Badge colorScheme="red" rounded="full" variant="solid" size="sm">
+                        <Badge colorScheme="danger" rounded={true} variant="solid" label="Yeni">
                           Yeni
                         </Badge>
                       )}
@@ -643,7 +644,17 @@ export const HomeScreen = () => {
                             <Pressable
                               onPress={(e) => {
                                 e.stopPropagation();
-                                navigation.navigate('SocialShare', { program });
+                                navigation.navigate('SocialShare', { 
+                                  program: {
+                                    id: program.id,
+                                    title: program.title,
+                                    description: program.description || '',
+                                    activities: program.activities?.map((activity: any) => ({
+                                      id: activity.id,
+                                      title: activity.title
+                                    })) || []
+                                  }
+                                });
                               }}
                               _pressed={{ opacity: 0.6 }}
                               p={2}
@@ -809,7 +820,18 @@ export const HomeScreen = () => {
               </Card>
               <Pressable onPress={() => {
                 if (programs.length > 0) {
-                  navigation.navigate('SocialShare', { program: programs[0] });
+                  const program = programs[0];
+                  navigation.navigate('SocialShare', { 
+                    program: {
+                      id: program.id,
+                      title: program.title,
+                      description: program.description || '',
+                      activities: program.activities?.map((activity: any) => ({
+                        id: activity.id,
+                        title: activity.title
+                      })) || []
+                    }
+                  });
                 } else {
                   Alert.alert('Bilgi', 'Paylaşmak için önce bir program oluşturun!');
                 }
@@ -878,13 +900,14 @@ export const HomeScreen = () => {
         >
           {hasNewRecommendations && (
             <Badge
-              colorScheme="red"
-              rounded="full"
+              colorScheme="danger"
+              rounded={true}
               mb={-1}
               mr={-1}
               zIndex={1}
               variant="solid"
               alignSelf="flex-end"
+              label="!"
               _text={{
                 fontSize: 12,
               }}
@@ -899,11 +922,11 @@ export const HomeScreen = () => {
           isVisible={showVoiceAgent}
           onClose={() => setShowVoiceAgent(false)}
           onTimelineGenerated={(timeline) => {
-            setCurrentTimeline(timeline);
+            setCurrentTimeline(timeline as unknown as DailyTimeline);
             setShowTimeline(true);
           }}
-          onRecommendationsGenerated={(recs: AIRecommendation[]) => {
-            setAiRecommendations(recs);
+          onRecommendationsGenerated={(recs: any[]) => {
+            setAiRecommendations(recs as unknown as AIRecommendation[]);
             setHasNewRecommendations(true);
           }}
         />

@@ -134,7 +134,7 @@ export const Input: React.FC<CustomInputProps> = ({
       
       <Box position="relative">
         <NBInput
-          variant={variant === 'glass' || variant === 'floating' ? 'outline' : (variant as any)}
+          variant={variant === 'glass' || variant === 'floating' ? 'outline' : variant}
           borderRadius={rounded}
           fontFamily="Inter"
           _focus={{

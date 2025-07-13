@@ -10,21 +10,40 @@ import {
   Pressable,
   useTheme,
   useColorModeValue,
-  Badge,
   Spinner,
   Avatar,
 } from 'native-base';
+import { Badge } from './ui';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Animated, Vibration } from 'react-native';
+import { Animated, Vibration, ScrollView as RNScrollView } from 'react-native';
 import { voiceService, VoiceMessage } from '../services/voiceService';
 import { aiAssistantService } from '../services/aiAssistantService';
 import { useAuth } from '../contexts/AuthContext';
 
+interface Timeline {
+  id: string;
+  activities: Array<{
+    id: string;
+    title: string;
+    description: string;
+    startTime: string;
+    endTime: string;
+    type: string;
+  }>;
+}
+
+interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+}
+
 interface VoiceAgentProps {
   isVisible: boolean;
   onClose: () => void;
-  onTimelineGenerated?: (timeline: any) => void;
-  onRecommendationsGenerated?: (recommendations: any[]) => void;
+  onTimelineGenerated?: (timeline: Timeline) => void;
+  onRecommendationsGenerated?: (recommendations: Recommendation[]) => void;
 }
 
 export const VoiceAgent: React.FC<VoiceAgentProps> = ({
@@ -44,7 +63,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const waveAnim = useRef(new Animated.Value(0)).current;
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<RNScrollView>(null);
 
   // Theme colors
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -135,7 +154,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       
       if (audioUri) {
         // Convert speech to text (mock for now)
-        const transcribedText = await voiceService.convertSpeechToText(audioUri);
+        const transcribedText = await voiceService.convertSpeechToText();
         
         // Add user message
         const userMessage: VoiceMessage = {
@@ -167,11 +186,16 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         
         // Handle special actions
         if (response.timeline && onTimelineGenerated) {
-          onTimelineGenerated(response.timeline);
+          onTimelineGenerated({...response.timeline, id: `timeline_${Date.now()}`});
         }
         
         if (response.recommendations && onRecommendationsGenerated) {
-          onRecommendationsGenerated(response.recommendations);
+          onRecommendationsGenerated(response.recommendations.map((rec: any, index: number) => ({
+            id: `rec_${Date.now()}_${index}`,
+            title: rec.title || 'Öneri',
+            description: rec.description || rec,
+            category: rec.category || 'general'
+          })));
         }
         
         // Speak response
@@ -260,7 +284,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
               bg="gray.500"
               _text={{ color: 'white', fontSize: 'xs' }}
             >
-              {user?.user_metadata?.full_name?.charAt(0) || 'U'}
+              {String(user?.user_metadata?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
             </Avatar>
           )}
         </HStack>
@@ -350,12 +374,12 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
             
             <HStack space={2} alignItems="center">
               {isRecording && (
-                <Badge colorScheme="red" variant="solid" rounded="full">
-                  <HStack space={1} alignItems="center">
-                    <Box size={2} bg="white" rounded="full" />
-                    <Text fontSize="xs" color="white">KAYIT</Text>
-                  </HStack>
-                </Badge>
+                <Badge 
+                  colorScheme="danger" 
+                  variant="solid" 
+                  rounded={true}
+                  label="KAYIT"
+                />
               )}
               
               <IconButton

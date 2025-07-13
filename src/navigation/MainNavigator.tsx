@@ -54,7 +54,7 @@ export type MainStackParamList = {
   Notifications: undefined;
   Chat: { chatId?: string; chatType?: 'direct' | 'group' | 'program'; participantId?: string; programId?: string };
   ActivityDetail: { activityId: string };
-  SocialShare: { program: any };
+  SocialShare: { program: { id: string; title: string; description: string; activities: Array<{ id: string; title: string; }> } };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
