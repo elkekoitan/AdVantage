@@ -334,11 +334,11 @@ class AIAssistantService {
             };
           }),
           totalBudget: Number(program.total_estimated_cost || 0),
-          estimatedSavings: Number((program as any).estimated_savings || 0),
+          estimatedSavings: Number((program as unknown as Record<string, unknown>).estimated_savings || 0),
           moodAnalysis: {
             primary: mood,
             secondary: 'productive',
-            recommendations: Array.isArray((program as any).recommendations) ? (program as any).recommendations as string[] : ['Güne pozitif başlayın']
+            recommendations: Array.isArray((program as unknown as Record<string, unknown>).recommendations) ? (program as unknown as Record<string, unknown>).recommendations as string[] : ['Güne pozitif başlayın']
           }
         };
         

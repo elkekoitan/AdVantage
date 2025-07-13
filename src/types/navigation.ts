@@ -26,7 +26,7 @@ export type MainStackParamList = {
   Map: { 
     initialLocation?: { latitude: number; longitude: number };
     searchQuery?: string;
-    places?: any[];
+    places?: Array<{ id: string; name: string; latitude: number; longitude: number; }>;
   };
   Settings: undefined;
   Notifications: undefined;

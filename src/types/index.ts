@@ -578,7 +578,7 @@ export interface Message {
   message_type: 'text' | 'image' | 'video' | 'audio' | 'location' | 'program_share' | 'business_share';
   content?: string;
   media_url?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   read_at?: string;
   edited_at?: string;
   deleted_at?: string;
@@ -599,7 +599,7 @@ export interface Conversation {
   last_activity_at: string;
   unread_count?: number;
   is_muted?: boolean;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -676,12 +676,12 @@ export interface BusinessCollaboration {
   collaboration_type: 'joint_event' | 'cross_promotion' | 'package_deal' | 'referral_program' | 'shared_campaign';
   title: string;
   description?: string;
-  terms: Record<string, any>;
+  terms: Record<string, unknown>;
   revenue_split: Record<string, number>;
   start_date: string;
   end_date?: string;
   status: 'proposed' | 'negotiating' | 'active' | 'paused' | 'completed' | 'cancelled';
-  performance_metrics: Record<string, any>;
+  performance_metrics: Record<string, unknown>;
   requirements?: string;
   created_at: string;
   updated_at: string;
@@ -703,10 +703,10 @@ export interface CollaborativeEvent {
   max_participants?: number;
   current_participants: number;
   registration_fee: number;
-  requirements: Record<string, any>;
+  requirements: Record<string, unknown>;
   media_urls?: string[];
   status: 'planning' | 'published' | 'active' | 'completed' | 'cancelled';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   is_participant?: boolean;
   created_at: string;
   updated_at: string;
@@ -734,7 +734,7 @@ export interface PartnershipRequest {
   requester_name?: string;
   target_name?: string;
   message?: string;
-  proposed_terms: Record<string, any>;
+  proposed_terms: Record<string, unknown>;
   status: 'pending' | 'accepted' | 'rejected' | 'expired';
   response_message?: string;
   expires_at: string;
@@ -764,7 +764,7 @@ export interface CreateCollaborationForm {
   collaboration_type: 'joint_event' | 'cross_promotion' | 'package_deal' | 'referral_program' | 'shared_campaign';
   title: string;
   description?: string;
-  terms: Record<string, any>;
+  terms: Record<string, unknown>;
   revenue_split: Record<string, number>;
   start_date: string;
   end_date?: string;
@@ -784,14 +784,14 @@ export interface CreateEventForm {
   end_date: string;
   max_participants?: number;
   registration_fee?: number;
-  requirements?: Record<string, any>;
+  requirements?: Record<string, unknown>;
 }
 
 export interface CreatePartnershipRequestForm {
   to_company_id: string;
   request_type: 'collaboration' | 'sponsorship' | 'vendor' | 'affiliate';
   message?: string;
-  proposed_terms: Record<string, any>;
+  proposed_terms: Record<string, unknown>;
 }
 
 // Utility Types

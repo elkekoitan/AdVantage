@@ -6,6 +6,11 @@ export { Modal, ConfirmationModal } from './Modal';
 export { Loading, SkeletonLoader, ListSkeleton, CardGridSkeleton } from './Loading';
 export { Badge, StatusBadge } from './Badge';
 export { Avatar, AvatarGroup, UserAvatar, CompanyAvatar } from './Avatar';
+export { InfiniteMenu } from './InfiniteMenu';
+export { Orb } from './Orb';
+export { AIChat } from './AIChat';
+export { default as SplitText } from './SplitText';
+export { default as BlurText } from './BlurText';
 
 // Re-export commonly used Native Base components with custom styling
 export {

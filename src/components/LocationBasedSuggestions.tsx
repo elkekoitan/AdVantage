@@ -133,7 +133,6 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
     
     try {
       // Enhanced search with multiple approaches
-      let results;
       
       // First try enhanced search
       try {
@@ -168,7 +167,7 @@ const LocationBasedSuggestions: React.FC<LocationBasedSuggestionsProps> = ({
       }
       
       // Fallback to basic POI search
-      results = await openRouteService.findNearbyPOIs(
+      const results = await openRouteService.findNearbyPOIs(
         { lat: userLocation.latitude, lng: userLocation.longitude },
         type,
         5000 // 5km radius

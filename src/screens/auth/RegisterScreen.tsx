@@ -138,11 +138,11 @@ const RegisterScreen: React.FC = () => {
         description: 'Hesabınız başarıyla oluşturuldu. Giriş yapabilirsiniz.'
       });
       
-      navigation.navigate('Login' as any);
-    } catch (error: any) {
+      navigation.navigate('Login');
+    } catch (error: unknown) {
       toast.show({
         title: 'Hata',
-        description: error.message || 'Kayıt olurken bir hata oluştu'
+        description: (error as Error)?.message || 'Kayıt olurken bir hata oluştu'
       });
     } finally {
       setLoading(false);
@@ -459,7 +459,7 @@ const RegisterScreen: React.FC = () => {
               <Pressable
                 alignItems="center"
                 mt={2}
-                onPress={() => navigation.navigate('Login' as any)}
+                onPress={() => navigation.navigate('Login')}
               >
                 <Text fontSize="sm" color="rgba(255, 255, 255, 0.8)">
                   Zaten hesabınız var mı?{' '}

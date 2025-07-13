@@ -232,7 +232,7 @@ export const MainNavigator = () => {
       />
       <Stack.Screen
         name="ConversationDetail"
-        component={({ route }: any) => <MessagesList conversationId={route.params?.conversationId || ''} />}
+        component={({ route }: { route: { params?: { conversationId?: string } } }) => <MessagesList conversationId={route.params?.conversationId || ''} />}
         options={{
           animation: 'slide_from_right',
           headerTitle: 'Sohbet',

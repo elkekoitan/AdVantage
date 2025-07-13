@@ -516,11 +516,11 @@ export const CreateProgramScreen = () => {
             <Icon as={MaterialIcons} name="auto-awesome" size={6} color="primary.500" />
             <VStack flex={1}>
               <Text fontSize="lg" fontWeight="bold">AI Program Önerisi</Text>
-              {(aiSuggestions as any)?.confidence_score && (
+              {(aiSuggestions as Record<string, unknown>)?.confidence_score && (
                 <HStack space={1} alignItems="center">
                   <Icon as={MaterialIcons} name="verified" size={3} color="green.500" />
                   <Text fontSize="xs" color="green.600">
-                    %{Math.round((aiSuggestions as any).confidence_score * 100)} Güven Skoru
+                    %{Math.round((aiSuggestions as Record<string, unknown>).confidence_score as number * 100)} Güven Skoru
                   </Text>
                 </HStack>
               )}
@@ -555,11 +555,11 @@ export const CreateProgramScreen = () => {
                           ₺{((aiSuggestions as Record<string, unknown>).total_estimated_cost as number)?.toLocaleString()}
                         </Text>
                       </HStack>
-                      {(aiSuggestions as any).estimated_cost && (
+                      {(aiSuggestions as Record<string, unknown>).estimated_cost && (
                         <HStack justifyContent="space-between">
                           <Text fontSize="sm" color="gray.600">Tahmini Maliyet:</Text>
                           <Text fontSize="sm" fontWeight="semibold" color="green.600">
-                            ₺{(aiSuggestions as any).estimated_cost?.toLocaleString()}
+                            ₺{((aiSuggestions as Record<string, unknown>).estimated_cost as number)?.toLocaleString()}
                           </Text>
                         </HStack>
                       )}
@@ -571,12 +571,12 @@ export const CreateProgramScreen = () => {
                       </HStack>
                       
                       {/* Budget Breakdown */}
-                      {(aiSuggestions as any).budget_breakdown && (
+                      {(aiSuggestions as Record<string, unknown>).budget_breakdown && (
                         <VStack space={2} mt={2} p={3} bg="white" borderRadius="md">
                           <Text fontSize="sm" fontWeight="semibold" color="gray.700">
                             📊 Bütçe Dağılımı:
                           </Text>
-                          {Object.entries((aiSuggestions as any).budget_breakdown).map(([key, value]) => (
+                          {Object.entries((aiSuggestions as Record<string, unknown>).budget_breakdown as Record<string, unknown>).map(([key, value]) => (
                             <HStack key={key} justifyContent="space-between" alignItems="center">
                               <HStack space={1} alignItems="center">
                                 <Text fontSize="xs">
@@ -604,7 +604,7 @@ export const CreateProgramScreen = () => {
                 </Card>
                 
                 {/* Budget Tips */}
-                {(aiSuggestions as any).budget_tips && (aiSuggestions as any).budget_tips.length > 0 && (
+                {(aiSuggestions as Record<string, unknown>).budget_tips && ((aiSuggestions as Record<string, unknown>).budget_tips as string[]).length > 0 && (
                   <Card bg="blue.50">
                     <VStack space={2} p={4}>
                       <HStack space={2} alignItems="center">
@@ -613,7 +613,7 @@ export const CreateProgramScreen = () => {
                           Bütçe Tasarrufu İpuçları
                         </Text>
                       </HStack>
-                      {(aiSuggestions as any).budget_tips.map((tip: string, index: number) => (
+                      {((aiSuggestions as Record<string, unknown>).budget_tips as string[]).map((tip: string, index: number) => (
                         <HStack key={index} space={2} alignItems="flex-start">
                           <Text fontSize="xs" color="blue.500">💡</Text>
                           <Text fontSize="sm" color="blue.600" flex={1}>
@@ -709,7 +709,7 @@ export const CreateProgramScreen = () => {
                 </VStack>
                 
                 {/* Alternative Options */}
-                {(aiSuggestions as any).alternative_options && (aiSuggestions as any).alternative_options.length > 0 && (
+                {(aiSuggestions as Record<string, unknown>).alternative_options && ((aiSuggestions as Record<string, unknown>).alternative_options as Record<string, unknown>[]).length > 0 && (
                   <Card bg="orange.50">
                     <VStack space={3} p={4}>
                       <HStack space={2} alignItems="center">
@@ -718,16 +718,16 @@ export const CreateProgramScreen = () => {
                           Alternatif Seçenekler
                         </Text>
                       </HStack>
-                      {(aiSuggestions as any).alternative_options.map((option: any, index: number) => (
+                      {((aiSuggestions as Record<string, unknown>).alternative_options as Record<string, unknown>[]).map((option: Record<string, unknown>, index: number) => (
                         <VStack key={index} space={1} p={2} bg="white" borderRadius="md">
                           <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                            {option.title}
+                            {option.title as string}
                           </Text>
                           <Text fontSize="xs" color="gray.600">
-                            {option.description}
+                            {option.description as string}
                           </Text>
                           <Text fontSize="xs" color="orange.600" fontWeight="semibold">
-                            Fark: ₺{option.cost_difference?.toLocaleString()}
+                            Fark: ₺{(option.cost_difference as number)?.toLocaleString()}
                           </Text>
                         </VStack>
                       ))}

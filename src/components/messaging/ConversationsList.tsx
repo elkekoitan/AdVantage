@@ -187,7 +187,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
         <View style={styles.avatarContainer}>
           <View style={[styles.avatar, { backgroundColor: item.type === 'group' ? '#4CAF50' : '#2196F3' }]}>
             <Ionicons 
-              name={getConversationIcon(item) as any} 
+              name={getConversationIcon(item) as keyof typeof Ionicons.glyphMap} 
               size={24} 
               color="#fff" 
             />

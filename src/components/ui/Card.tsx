@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Box, IBoxProps, VStack, HStack, Heading, Text, Pressable } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -93,6 +92,7 @@ const CardFooter: React.FC<CardFooterProps> = ({ children }) => {
   );
 };
 
+/* eslint-disable react/prop-types */
 const Card: React.FC<CardProps> & {
   Header: typeof CardHeader;
   Body: typeof CardBody;
@@ -226,17 +226,5 @@ const Card: React.FC<CardProps> & {
 Card.Header = CardHeader;
 Card.Body = CardBody;
 Card.Footer = CardFooter;
-
-Card.propTypes = {
-  children: PropTypes.any.isRequired,
-  variant: PropTypes.oneOf(['elevated', 'outline', 'filled', 'ghost']),
-  onPress: PropTypes.func,
-  isDisabled: PropTypes.bool,
-};
-
-Card.defaultProps = {
-  variant: 'elevated',
-  isDisabled: false,
-};
 
 export { Card };

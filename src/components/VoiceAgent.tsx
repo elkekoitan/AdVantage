@@ -193,7 +193,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
           onRecommendationsGenerated(response.recommendations.map((rec: any, index: number) => ({
             id: `rec_${Date.now()}_${index}`,
             title: rec.title || 'Öneri',
-            description: rec.description || rec,
+            description: rec.description || String(rec),
             category: rec.category || 'general'
           })));
         }

@@ -282,7 +282,7 @@ export const LoginScreen = () => {
                 {/* Forgot Password */}
                  <Pressable 
                    alignSelf="flex-end"
-                   onPress={() => navigation.navigate('ForgotPassword' as any)}
+                   onPress={() => navigation.navigate('ForgotPassword')}
                    mt={2}
                  >
                    <Text fontSize="sm" color="primary.500" fontWeight="medium">
@@ -386,7 +386,7 @@ export const LoginScreen = () => {
              <Text fontSize="md" color="white" opacity={0.8}>
                Hesabınız yok mu?
              </Text>
-             <Pressable onPress={() => navigation.navigate('Register' as any)}>
+             <Pressable onPress={() => navigation.navigate('Register', {})}>
                 <Text fontSize="md" color="white" fontWeight="bold" underline>
                   Kayıt Ol
                 </Text>

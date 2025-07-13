@@ -2,10 +2,8 @@ import { supabase } from './supabase';
 import { Share } from 'react-native';
 import { Alert, Linking, Platform } from 'react-native';
 
-import { Program } from '../types';
-
 export interface SocialShareData {
-  program: Program;
+  program: Record<string, unknown>;
   platforms: string[];
   title: string;
   description: string;
@@ -37,7 +35,7 @@ class SocialShareService {
     try {
       const shareRecord: Omit<SocialShareRecord, 'id' | 'created_at' | 'updated_at'> = {
         user_id: userId,
-        program_id: shareData.program.id,
+        program_id: String(shareData.program.id),
         platforms: shareData.platforms,
         title: shareData.title,
         description: shareData.description,

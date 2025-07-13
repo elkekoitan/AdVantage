@@ -301,7 +301,7 @@ export class FavoritesService {
   static async getFavoriteBasedRecommendations(
     favoriteType: 'program' | 'company' | 'activity' | 'campaign',
     limit = 10
-  ): Promise<any[]> {
+  ): Promise<Record<string, unknown>[]> {
     try {
       const user = await supabase.auth.getUser();
       if (!user.data.user) throw new Error('User not authenticated');

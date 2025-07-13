@@ -18,6 +18,7 @@ import { Badge } from './ui';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TimelineActivity, DailyTimeline } from '../services/aiAssistantService';
 import { Card } from './ui/Card';
+import { InfiniteMenu } from './ui/InfiniteMenu';
 
 interface TimelineViewProps {
   timeline: DailyTimeline;
@@ -186,7 +187,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               <MaterialIcons
                 name="psychology"
                 size={20}
-                color={(theme.colors[getMoodColor(timeline.moodAnalysis.primary) as keyof typeof theme.colors] as any)?.[500] || theme.colors.gray[500]}
+                color={(theme.colors[getMoodColor(timeline.moodAnalysis.primary) as keyof typeof theme.colors] as Record<string, unknown>)?.[500] as string || theme.colors.gray[500]}
               />
             </Box>
             <VStack flex={1}>
@@ -343,70 +344,59 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     );
   };
 
+  const convertAlternativesToMenuItems = () => {
+    if (!selectedActivity?.alternatives) return [];
+    
+    return selectedActivity.alternatives.map((alternative, index) => ({
+      id: `alt_${index}`,
+      image: `https://picsum.photos/300/300?random=${index + 1}`,
+      link: alternative.location?.address || '',
+      title: alternative.title,
+      description: `${alternative.description}${alternative.budget ? ` • ${formatCurrency(alternative.budget.min)}-${formatCurrency(alternative.budget.max)}` : ''}${alternative.discount ? ` • %${alternative.discount.percentage} İndirim` : ''}`,
+    }));
+  };
+
+  const handleMenuItemSelect = (item: any) => {
+    const alternativeIndex = parseInt(item.id.split('_')[1]);
+    const alternative = selectedActivity?.alternatives?.[alternativeIndex];
+    if (alternative) {
+      handleAlternativeSelect(alternative);
+    }
+  };
+
   const renderAlternativesModal = () => (
-    <Modal isOpen={showAlternatives} onClose={() => setShowAlternatives(false)} size="lg">
-      <Modal.Content>
-        <Modal.Header>
-          <Text fontSize="lg" fontWeight="bold">
-            🔄 Alternatif Seçenekler
-          </Text>
+    <Modal isOpen={showAlternatives} onClose={() => setShowAlternatives(false)} size="full">
+      <Modal.Content bg={bgColor} maxH="95%" mt="auto" mb={0} roundedTop="3xl">
+        <Modal.Header borderBottomWidth={0} pb={2}>
+          <HStack justifyContent="space-between" alignItems="center" width="100%">
+            <VStack>
+              <Text fontSize="lg" fontWeight="bold" color={textColor}>
+                🔄 Alternatif Seçenekler
+              </Text>
+              <Text fontSize="sm" color={mutedColor}>
+                {selectedActivity?.title} için seçenekler
+              </Text>
+            </VStack>
+            <IconButton
+              icon={<MaterialIcons name="close" size={24} />}
+              onPress={() => setShowAlternatives(false)}
+              variant="ghost"
+              rounded="full"
+            />
+          </HStack>
         </Modal.Header>
         
-        <Modal.Body>
-          <VStack space={3}>
-            {selectedActivity?.alternatives?.map((alternative, index) => (
-              <Pressable
-                key={`alt_${index}`}
-                onPress={() => handleAlternativeSelect(alternative)}
-                _pressed={{ opacity: 0.8 }}
-              >
-                <Card variant="outline" padding={4}>
-                  <VStack space={2}>
-                    <HStack justifyContent="space-between" alignItems="center">
-                      <Text fontSize="md" fontWeight="bold" color={textColor}>
-                        {alternative.title}
-                      </Text>
-                      {alternative.budget && (
-                        <Text fontSize="sm" color="primary.500" fontWeight="500">
-                          {formatCurrency(alternative.budget.min)} - {formatCurrency(alternative.budget.max)}
-                        </Text>
-                      )}
-                    </HStack>
-                    
-                    <Text fontSize="sm" color={mutedColor}>
-                      {alternative.description}
-                    </Text>
-                    
-                    {alternative.location && (
-                      <HStack space={1} alignItems="center">
-                        <MaterialIcons name="location-on" size={14} color={theme.colors.gray[500]} />
-                        <Text fontSize="xs" color={mutedColor}>
-                          {alternative.location.name}
-                        </Text>
-                      </HStack>
-                    )}
-                    
-                    {alternative.discount && (
-                      <Badge 
-                        label={`%${alternative.discount.percentage} İndirim`}
-                        colorScheme="danger" 
-                        variant="solid" 
-                        rounded={true} 
-                        alignSelf="flex-start"
-                      />
-                    )}
-                  </VStack>
-                </Card>
-              </Pressable>
-            ))}
-          </VStack>
+        <Modal.Body px={4} py={2} flex={1}>
+          <Box flex={1}>
+            <InfiniteMenu
+              items={convertAlternativesToMenuItems()}
+              onItemSelect={handleMenuItemSelect}
+              height={500}
+              autoExpire={true}
+              expireDuration={8000}
+            />
+          </Box>
         </Modal.Body>
-        
-        <Modal.Footer>
-          <Button variant="ghost" onPress={() => setShowAlternatives(false)}>
-            İptal
-          </Button>
-        </Modal.Footer>
       </Modal.Content>
     </Modal>
   );
@@ -436,7 +426,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     console.log('Timeline saved');
                   }}
                 >
-                  Timeline'ı Kaydet
+                  Timeline&apos;ı Kaydet
                 </Button>
                 
                 <Button

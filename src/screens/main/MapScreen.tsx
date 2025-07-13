@@ -24,6 +24,19 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { openRouteService } from '../../services/openRouteService';
 import type { MainStackParamList } from '../../types/navigation';
 
+// Place interface
+interface Place {
+  properties: {
+    id?: string;
+    name?: string;
+    label?: string;
+    category?: string;
+  };
+  geometry: {
+    coordinates: [number, number]; // [lng, lat]
+  };
+}
+
 // Design system
 const colors = {
   primary: '#007AFF',
@@ -51,7 +64,7 @@ interface MapScreenProps {
     params?: {
       initialLocation?: { latitude: number; longitude: number };
       searchQuery?: string;
-      places?: any[];
+      places?: Place[];
     };
   };
 }
@@ -69,8 +82,8 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
   });
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [places, setPlaces] = useState<any[]>([]);
-  const [selectedPlace, setSelectedPlace] = useState<any | null>(null);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showPlacesList, setShowPlacesList] = useState(false);
@@ -117,7 +130,19 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
       const response = await openRouteService.geocodeAddress(searchText);
       
       if (response.features.length > 0) {
-        setPlaces(response.features);
+        // Convert GeocodingResponse features to Place format
+        const convertedPlaces: Place[] = response.features.map(feature => ({
+          properties: {
+            id: feature.properties.gid,
+            name: feature.properties.name,
+            label: feature.properties.label,
+            category: feature.properties.layer
+          },
+          geometry: {
+            coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [number, number]
+          }
+        }));
+        setPlaces(convertedPlaces);
         setShowPlacesList(true);
         
         if (response.features.length > 0) {
@@ -174,7 +199,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
     }
   }, [initializeLocation, handleSearch, route]);
 
-  const handlePlaceSelect = async (place: any) => {
+  const handlePlaceSelect = async (place: Place) => {
     setSelectedPlace(place);
     setShowPlacesList(false);
     setShowRoute(false);
@@ -257,7 +282,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ route }) => {
     }
   };
 
-  const renderPlaceItem = (place: any, index: number) => (
+  const renderPlaceItem = (place: Place, index: number) => (
     <Pressable
       key={index}
       px={5}

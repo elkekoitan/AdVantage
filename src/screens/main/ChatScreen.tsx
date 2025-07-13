@@ -5,7 +5,6 @@ import {
   HStack,
   Text,
   Input,
-  ScrollView,
   Icon,
   Pressable,
   useColorModeValue,
@@ -16,7 +15,7 @@ import {
   useToast,
 
 } from 'native-base';
-import { Platform, Keyboard } from 'react-native';
+import { Platform, Keyboard, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -60,7 +59,7 @@ export const ChatScreen = () => {
   const route = useRoute();
   const { user } = useAuth();
   const toast = useToast();
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   
   const params = route.params as ChatScreenParams;
   
@@ -493,7 +492,7 @@ export const ChatScreen = () => {
         {/* Messages */}
         <ScrollView
           ref={scrollViewRef}
-          flex={1}
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 16 }}
         >

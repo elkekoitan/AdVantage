@@ -615,7 +615,7 @@ export const ActivityDetailScreen = () => {
               <Pressable
                 key={tab.key}
                 flex={1}
-                onPress={() => setActiveTab(tab.key as any)}
+                onPress={() => setActiveTab(tab.key as 'details' | 'participants' | 'expenses' | 'photos')}
               >
                 <VStack
                   alignItems="center"

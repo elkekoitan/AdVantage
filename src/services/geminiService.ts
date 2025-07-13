@@ -126,8 +126,8 @@ class GeminiService {
 Sen bir AI program asistanısın. Kullanıcının tercihlerine göre günlük program oluştur.
 
 Kullanıcı Bilgileri:
-- İlgi Alanları: ${(request.user_preferences as any)?.interests?.join(', ') || 'Genel'}
-        - Aktivite Türleri: ${(request.user_preferences as any)?.preferredActivities?.join(', ') || 'Çeşitli'}
+- İlgi Alanları: ${Array.isArray((request.user_preferences as Record<string, unknown>)?.interests) ? ((request.user_preferences as Record<string, unknown>).interests as string[]).join(', ') : 'Genel'}
+        - Aktivite Türleri: ${Array.isArray((request.user_preferences as Record<string, unknown>)?.preferredActivities) ? ((request.user_preferences as Record<string, unknown>).preferredActivities as string[]).join(', ') : 'Çeşitli'}
 - Bütçe: ${request.budget} TL
 - Süre: ${request.duration} saat
 - Konum: ${request.location}
@@ -195,8 +195,8 @@ Sadece JSON formatında yanıt ver, başka açıklama ekleme.
 Kullanıcı için ${category} kategorisinde öneriler oluştur.
 
 Kullanıcı Profili:
-- İlgi Alanları: ${userPrefs.interests.join(', ')}
-- Tercih Edilen Aktiviteler: ${userPrefs.preferredActivities.join(', ')}
+- İlgi Alanları: ${Array.isArray(userPrefs.interests) ? userPrefs.interests.join(', ') : 'Genel'}
+- Tercih Edilen Aktiviteler: ${Array.isArray(userPrefs.preferredActivities) ? userPrefs.preferredActivities.join(', ') : 'Çeşitli'}
 - Bütçe Aralığı: ${budget} TL
 - Konum: ${location}
 - Sosyal Tercih: ${userPrefs.socialPreference}
@@ -293,14 +293,14 @@ Optimize edilmiş aktivite listesini JSON formatında döndür:
     }
   }
 
-  async generateBudgetProgram(preferences: any, budget: number, duration: number, location: string): Promise<any> {
+  async generateBudgetProgram(preferences: Record<string, unknown>, budget: number, duration: number, location: string): Promise<Record<string, unknown> | null> {
     try {
       const prompt = `
 Sen bir AI program asistanısın. Kullanıcının tercihlerine ve bütçesine göre detaylı bir program oluştur.
 
 Kullanıcı Tercihleri:
-- İlgi Alanları: ${preferences.interests?.join(', ') || 'Genel'}
-- Tercih Edilen Aktiviteler: ${preferences.preferredActivities?.join(', ') || 'Çeşitli'}
+- İlgi Alanları: ${Array.isArray(preferences.interests) ? (preferences.interests as string[]).join(', ') : 'Genel'}
+- Tercih Edilen Aktiviteler: ${Array.isArray(preferences.preferredActivities) ? (preferences.preferredActivities as string[]).join(', ') : 'Çeşitli'}
 - Bütçe: ${budget} TL
 - Süre: ${duration} saat
 - Konum: ${location}
@@ -371,7 +371,7 @@ Sadece JSON formatında yanıt ver, başka açıklama ekleme.
     }
   }
 
-  async optimizeProgramBudget(program: any, newBudget: number): Promise<any> {
+  async optimizeProgramBudget(program: Record<string, unknown>, newBudget: number): Promise<Record<string, unknown>> {
     try {
       const prompt = `
 Verilen programı ${newBudget} TL bütçeye göre optimize et.

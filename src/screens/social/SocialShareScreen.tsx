@@ -187,10 +187,10 @@ const SocialShareScreen: React.FC = () => {
 
     try {
       setIsGeneratingCollage(true);
-      const uri = await collageGenerator.captureCollage(viewShotRef as any, {
-        format: 'png',
-        quality: 0.9,
-      });
+      if (!viewShotRef.current?.capture) {
+        throw new Error('ViewShot ref is not available');
+      }
+      const uri = await viewShotRef.current.capture();
       
       if (uri) {
         setCollageImage(uri);
@@ -241,7 +241,7 @@ const SocialShareScreen: React.FC = () => {
 
       // Paylaşım verilerini hazırla
       const shareData: SocialShareData = {
-        program: program as any,
+        program: program as unknown as Record<string, unknown>,
         platforms: selectedPlatforms,
         title: program.title,
         description: customCaption,

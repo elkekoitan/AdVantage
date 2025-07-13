@@ -17,7 +17,7 @@ import {
   Button,
   Icon,
 } from 'native-base';
-import { Badge } from '../../components/ui';
+import { Badge, SplitText, BlurText } from '../../components/ui';
 import { RefreshControl, Alert } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,12 +49,9 @@ interface Program {
 
 interface Recommendation {
   id: string;
-  type: 'restaurant' | 'activity' | 'product' | 'event';
   title: string;
   description: string;
-  image_url?: string;
-  score: number;
-  reason: string;
+  category: string;
 }
 
 interface UserStats {
@@ -332,13 +329,25 @@ export const HomeScreen = () => {
                   {String(user?.user_metadata?.full_name || 'U').charAt(0)}
                 </Avatar>
                 <VStack>
-                  <Text color={mutedColor} fontSize="sm">Merhaba,</Text>
-                  <Heading size="md" color={textColor}>
-                    {user?.user_metadata?.full_name || 'Kullanıcı'}
-                  </Heading>
-                  <Text color={mutedColor} fontSize="xs">
-                    Bugün hangi deneyimi yaşamak istiyorsunuz?
-                  </Text>
+                  <BlurText 
+                    text="Merhaba," 
+                    style={{ color: '#6B7280', fontSize: 14 }}
+                    delay={50}
+                    animateBy="words"
+                  />
+                  <SplitText 
+                    text={user?.user_metadata?.full_name || 'Kullanıcı'}
+                    style={{ fontSize: 18, fontWeight: '600', color: '#1F2937' }}
+                    delay={100}
+                    splitType="chars"
+                  />
+                  <BlurText 
+                    text="Bugün hangi deneyimi yaşamak istiyorsunuz?"
+                    style={{ color: '#6B7280', fontSize: 12 }}
+                    delay={30}
+                    animateBy="words"
+                    direction="bottom"
+                  />
                 </VStack>
               </HStack>
               <HStack space={2}>
@@ -382,7 +391,12 @@ export const HomeScreen = () => {
 
           {/* Quick Actions */}
           <Box px={6} py={4}>
-            <Heading size="md" color={textColor} mb={4}>Hızlı İşlemler</Heading>
+            <SplitText 
+              text="Hızlı İşlemler"
+              style={{ fontSize: 18, fontWeight: '600', marginBottom: 16 }}
+              delay={80}
+              splitType="chars"
+            />
             <VStack space={4}>
               <HStack space={3} justifyContent="space-between">
                 <Pressable
@@ -596,7 +610,12 @@ export const HomeScreen = () => {
 
           {/* User Stats */}
           <Box px={6} py={4}>
-            <Heading size="md" color={textColor} mb={4}>İstatistiklerim</Heading>
+            <SplitText 
+              text="İstatistiklerim"
+              style={{ fontSize: 18, fontWeight: '600', marginBottom: 16 }}
+              delay={80}
+              splitType="chars"
+            />
             <HStack space={4} justifyContent="space-between">
               <Card variant="elevated" flex={1} padding={4}>
                 <VStack space={2} alignItems="center">
@@ -706,8 +725,8 @@ export const HomeScreen = () => {
                                     title: program.title,
                                     description: program.description || '',
                                     activities: program.activities?.map((activity: any) => ({
-                                      id: activity.id,
-                                      title: activity.title
+                                      id: String(activity.id),
+                                      title: String(activity.title)
                                     })) || []
                                   }
                                 });
@@ -823,7 +842,7 @@ export const HomeScreen = () => {
                       <HStack space={4} alignItems="center">
                         <Box bg="primary.100" p={3} rounded="full">
                           <MaterialIcons 
-                            name={getRecommendationIcon(recommendation.type)} 
+                            name={getRecommendationIcon(recommendation.category)} 
                             size={24} 
                             color={theme.colors.primary[500]} 
                           />
@@ -836,7 +855,7 @@ export const HomeScreen = () => {
                             {recommendation.description}
                           </Text>
                           <Text fontSize="xs" color="primary.500" fontWeight="500">
-                            {recommendation.reason}
+                            {recommendation.category}
                           </Text>
                         </VStack>
                         <VStack space={1} alignItems="center">
@@ -844,7 +863,7 @@ export const HomeScreen = () => {
                             Match
                           </Text>
                           <Text fontSize="sm" color="primary.500" fontWeight="bold">
-                            {Math.round(recommendation.score * 100)}%
+                            100%
                           </Text>
                         </VStack>
                       </HStack>
@@ -883,8 +902,8 @@ export const HomeScreen = () => {
                       title: program.title,
                       description: program.description || '',
                       activities: program.activities?.map((activity: any) => ({
-                        id: activity.id,
-                        title: activity.title
+                        id: String(activity.id),
+                        title: String(activity.title)
                       })) || []
                     }
                   });
@@ -981,7 +1000,7 @@ export const HomeScreen = () => {
             setCurrentTimeline(timeline as unknown as DailyTimeline);
             setShowTimeline(true);
           }}
-          onRecommendationsGenerated={(recs: any[]) => {
+          onRecommendationsGenerated={(recs: Recommendation[]) => {
             setAiRecommendations(recs as unknown as AIRecommendation[]);
             setHasNewRecommendations(true);
           }}

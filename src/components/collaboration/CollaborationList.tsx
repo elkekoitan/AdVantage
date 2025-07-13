@@ -18,7 +18,7 @@ type TabType = 'collaborations' | 'events' | 'partnerships' | 'connections';
 
 interface CollaborationListProps {
   initialTab?: TabType;
-  onItemPress?: (item: any, type: TabType) => void;
+  onItemPress?: (item: BusinessCollaboration | CollaborativeEvent | PartnershipRequest | UserConnection, type: TabType) => void;
 }
 
 const CollaborationList: React.FC<CollaborationListProps> = ({
@@ -458,7 +458,7 @@ const CollaborationList: React.FC<CollaborationListProps> = ({
               onPress={() => setActiveTab(tab.key as TabType)}
             >
               <Ionicons
-                name={tab.icon as any}
+                name={tab.icon as keyof typeof Ionicons.glyphMap}
                 size={20}
                 color={activeTab === tab.key ? '#007AFF' : '#666'}
               />
@@ -500,9 +500,9 @@ const CollaborationList: React.FC<CollaborationListProps> = ({
 
       {/* Content */}
       <FlatList
-        data={getCurrentData() as any[]}
+        data={getCurrentData()}
         renderItem={getCurrentRenderer() as any}
-        keyExtractor={(item: any) => item.id}
+        keyExtractor={(item: any) => item.id ? String(item.id) : Math.random().toString()}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="folder-open-outline" size={64} color="#ccc" />

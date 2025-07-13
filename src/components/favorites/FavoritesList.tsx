@@ -164,7 +164,7 @@ const FavoritesList: React.FC<FavoritesListProps> = ({
           {/* Type Icon */}
           <View style={[styles.typeIcon, { backgroundColor: getTypeColor(item.favorite_type) }]}>
             <Ionicons 
-              name={getTypeIcon(item.favorite_type) as any} 
+              name={getTypeIcon(item.favorite_type) as keyof typeof Ionicons.glyphMap} 
               size={20} 
               color="#fff" 
             />
@@ -251,7 +251,7 @@ const FavoritesList: React.FC<FavoritesListProps> = ({
             {Object.entries(favoriteCounts).map(([type, count]) => (
               <View key={type} style={styles.countItem}>
                 <Ionicons 
-                  name={getTypeIcon(type) as any} 
+                  name={getTypeIcon(type) as keyof typeof Ionicons.glyphMap} 
                   size={16} 
                   color={getTypeColor(type)} 
                 />

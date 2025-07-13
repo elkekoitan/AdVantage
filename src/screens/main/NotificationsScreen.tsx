@@ -33,7 +33,7 @@ interface Notification {
   type: 'program_update' | 'ai_recommendation' | 'friend_request' | 'activity_reminder' | 'system' | 'achievement';
   title: string;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
   read: boolean;
   created_at: string;
   action_url?: string;

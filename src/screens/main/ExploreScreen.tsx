@@ -19,6 +19,19 @@ import { openRouteService } from '../../services/openRouteService';
 import * as Location from 'expo-location';
 import type { MainStackParamList } from '../../types/navigation';
 
+// Place interface
+interface Place {
+  properties: {
+    id?: string;
+    name?: string;
+    label?: string;
+    category?: string;
+  };
+  geometry: {
+    coordinates: [number, number]; // [lng, lat]
+  };
+}
+
 // Design system
 const colors = {
   primary: '#007AFF',
@@ -270,7 +283,18 @@ const ExploreScreen: React.FC = () => {
             { text: 'Detayları Gör', onPress: () => {
               // Show first place details
               if (results.features[0]) {
-                handlePlaceSelect(results.features[0]);
+                const feature = results.features[0];
+                const place: Place = {
+                  properties: {
+                    id: feature.properties.id,
+                    name: feature.properties.name,
+                    category: feature.properties.category
+                  },
+                  geometry: {
+                    coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [number, number]
+                  }
+                };
+                handlePlaceSelect(place);
               }
             }}
           ]
@@ -312,7 +336,7 @@ const ExploreScreen: React.FC = () => {
     Alert.alert('Yakında', 'Favoriler özelliği yakında eklenecek!');
   };
 
-  const handleGetDirections = async (place: any) => {
+  const handleGetDirections = async (place: Place) => {
     if (!userLocation) {
       Alert.alert('Hata', 'Konum bilgisi alınamadı');
       return;
@@ -348,14 +372,14 @@ const ExploreScreen: React.FC = () => {
     }
   };
 
-  const handleAddToFavorites = (place: any) => {
+  const handleAddToFavorites = (place: Place) => {
     // TODO: Implement favorites functionality
-    Alert.alert('Başarılı', `${place.properties.name} favorilere eklendi!`);
+    Alert.alert('Başarılı', `${place.properties.name || place.properties.label || 'Yer'} favorilere eklendi!`);
   };
 
-  const handlePlaceSelect = (place: any) => {
+  const handlePlaceSelect = (place: Place) => {
     Alert.alert(
-      place.properties.name,
+      place.properties.name || place.properties.label || 'Yer',
       `Kategori: ${place.properties.category || 'Bilinmiyor'}`,
       [
         { text: 'İptal', style: 'cancel' },
@@ -366,8 +390,8 @@ const ExploreScreen: React.FC = () => {
     );
   };
 
-  const handleNavigateToMap = (place?: any, searchQuery?: string) => {
-    const params: any = {};
+  const handleNavigateToMap = (place?: Place, searchQuery?: string) => {
+    const params: Record<string, unknown> = {};
     
     if (place) {
       params.initialLocation = {

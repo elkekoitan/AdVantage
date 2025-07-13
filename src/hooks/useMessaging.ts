@@ -318,8 +318,7 @@ export const useMessaging = () => {
 
   // Set up real-time subscriptions
   useEffect(() => {
-    let messageSubscription: any;
-    let conversationSubscription: any;
+    let messageSubscription: { unsubscribe: () => void } | null = null;
 
     const setupSubscriptions = async () => {
       try {
@@ -352,9 +351,7 @@ export const useMessaging = () => {
       if (messageSubscription) {
         messageSubscription.unsubscribe();
       }
-      if (conversationSubscription) {
-        conversationSubscription.unsubscribe();
-      }
+      // conversationSubscription is currently null, so no unsubscribe needed
     };
   }, []);
 
