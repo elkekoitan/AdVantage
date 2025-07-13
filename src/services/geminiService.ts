@@ -292,6 +292,122 @@ Optimize edilmiş aktivite listesini JSON formatında döndür:
       return activities;
     }
   }
+
+  async generateBudgetProgram(preferences: any, budget: number, duration: number, location: string): Promise<any> {
+    try {
+      const prompt = `
+Sen bir AI program asistanısın. Kullanıcının tercihlerine ve bütçesine göre detaylı bir program oluştur.
+
+Kullanıcı Tercihleri:
+- İlgi Alanları: ${preferences.interests?.join(', ') || 'Genel'}
+- Tercih Edilen Aktiviteler: ${preferences.preferredActivities?.join(', ') || 'Çeşitli'}
+- Bütçe: ${budget} TL
+- Süre: ${duration} saat
+- Konum: ${location}
+- Sosyal Tercih: ${preferences.socialPreference || 'ambivert'}
+- Fitness Seviyesi: ${preferences.fitnessLevel || 'intermediate'}
+
+Lütfen aşağıdaki JSON formatında detaylı bir program oluştur:
+
+{
+  "title": "Program başlığı",
+  "description": "Program detaylı açıklaması",
+  "total_budget": ${budget},
+  "estimated_cost": tahmini_toplam_maliyet,
+  "duration_hours": ${duration},
+  "budget_breakdown": {
+    "food": yemek_bütçesi,
+    "entertainment": eğlence_bütçesi,
+    "transport": ulaşım_bütçesi,
+    "shopping": alışveriş_bütçesi,
+    "other": diğer_bütçesi
+  },
+  "activities": [
+    {
+      "title": "Aktivite adı",
+      "description": "Detaylı açıklama",
+      "category": "kategori",
+      "estimated_cost": maliyet,
+      "duration": süre_saat,
+      "priority": 1-5_arası,
+      "location": "konum",
+      "time_slot": "önerilen_zaman",
+      "tips": "kullanıcı_ipuçları"
+    }
+  ],
+  "budget_tips": [
+    "Bütçe tasarrufu ipucu 1",
+    "Bütçe tasarrufu ipucu 2"
+  ],
+  "alternative_options": [
+    {
+      "title": "Alternatif seçenek",
+      "description": "Açıklama",
+      "cost_difference": fark_tutarı
+    }
+  ]
+}
+
+Sadece JSON formatında yanıt ver, başka açıklama ekleme.
+`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      const cleanedText = text.replace(/```json\n?|```\n?/g, '').trim();
+      
+      try {
+        const program = JSON.parse(cleanedText);
+        return program;
+      } catch (parseError) {
+        console.error('JSON parse error for budget program:', parseError);
+        console.log('Raw response:', text);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error generating budget program:', error);
+      return null;
+    }
+  }
+
+  async optimizeProgramBudget(program: any, newBudget: number): Promise<any> {
+    try {
+      const prompt = `
+Verilen programı ${newBudget} TL bütçeye göre optimize et.
+
+Mevcut Program:
+${JSON.stringify(program, null, 2)}
+
+Optimizasyon yaparken:
+1. Program kalitesini korumaya çalış
+2. En önemli aktiviteleri koru
+3. Daha uygun alternatifler öner
+4. Bütçe dağılımını yeniden hesapla
+5. Kullanıcıya değer katacak öneriler sun
+
+Optimize edilmiş programı aynı JSON formatında döndür.
+Sadece JSON formatında yanıt ver.
+`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      const cleanedText = text.replace(/```json\n?|```\n?/g, '').trim();
+      
+      try {
+        const optimizedProgram = JSON.parse(cleanedText);
+        return optimizedProgram;
+      } catch (parseError) {
+        console.error('JSON parse error for program optimization:', parseError);
+        return program;
+      }
+    } catch (error) {
+      console.error('Error optimizing program budget:', error);
+      return program;
+    }
+  }
 }
 
 export const geminiService = new GeminiService();
